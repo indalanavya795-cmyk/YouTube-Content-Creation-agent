@@ -1,5 +1,4 @@
-from agent import generate_youtube_idea, generate_youtube_titles
-
+from agent import generate_youtube_idea, generate_youtube_titles, generate_youtube_description
 
 print("🤖 Welcome to the YouTube Content Creation Agent!")
 
@@ -20,3 +19,9 @@ titles = generate_youtube_titles(idea)
 
 print("🎬 Here are your YouTube title suggestions:\n")
 print(titles)
+print("\nGenerating YouTube description...\n")
+
+description = generate_youtube_description(idea)
+
+print("📝 YouTube description:\n")
+print(description)
