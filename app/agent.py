@@ -1,16 +1,4 @@
-import os
-from dotenv import load_dotenv
-from openai import OpenAI
-
-
-# Load environment variables from .env
-load_dotenv()
-
-# Get API key
-api_key = os.getenv("OPENAI_API_KEY")
-
-# Create OpenAI client
-client = OpenAI(api_key=api_key)
+import ollama
 
 
 def generate_youtube_idea(topic):
@@ -27,8 +15,8 @@ def generate_youtube_idea(topic):
     Number each idea.
     """
 
-    response = client.chat.completions.create(
-        model="gpt-4.1-mini",
+    response = ollama.chat(
+        model="llama3.2",
         messages=[
             {
                 "role": "user",
@@ -37,4 +25,4 @@ def generate_youtube_idea(topic):
         ]
     )
 
-    return response.choices[0].message.content
+    return response["message"]["content"]
