@@ -1,3 +1,4 @@
+import os
 import ollama
 
 
@@ -150,3 +151,37 @@ def generate_youtube_script(idea):
     )
 
     return response["message"]["content"]
+def save_youtube_content(idea, titles, description, hashtags, script):
+    """
+    Saves generated YouTube content into a text file.
+    """
+
+    os.makedirs("outputs", exist_ok=True)
+
+    file_path = "outputs/youtube_content.txt"
+
+    with open(file_path, "w", encoding="utf-8") as file:
+        file.write("YOUTUBE CONTENT CREATION AGENT\n")
+        file.write("=" * 40 + "\n\n")
+
+        file.write("VIDEO IDEA\n")
+        file.write("-" * 20 + "\n")
+        file.write(idea + "\n\n")
+
+        file.write("YOUTUBE TITLES\n")
+        file.write("-" * 20 + "\n")
+        file.write(titles + "\n\n")
+
+        file.write("DESCRIPTION\n")
+        file.write("-" * 20 + "\n")
+        file.write(description + "\n\n")
+
+        file.write("HASHTAGS\n")
+        file.write("-" * 20 + "\n")
+        file.write(hashtags + "\n\n")
+
+        file.write("VIDEO SCRIPT\n")
+        file.write("-" * 20 + "\n")
+        file.write(script + "\n")
+
+    return file_path
