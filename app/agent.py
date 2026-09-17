@@ -116,3 +116,37 @@ def generate_youtube_hashtags(idea):
     )
 
     return response["message"]["content"]
+def generate_youtube_script(idea):
+    """
+    Generates a complete YouTube video script based on a video idea.
+    """
+
+    prompt = f"""
+    Write a complete YouTube video script based on this idea:
+
+    {idea}
+
+    The script should include:
+    - A strong opening hook
+    - A short introduction
+    - Clear main sections
+    - Natural transitions
+    - A friendly and engaging tone
+    - A conclusion
+    - A simple call to action asking viewers to like, subscribe, and comment
+
+    Make the script suitable for a beginner-friendly YouTube video.
+    Do not include camera directions or complicated production instructions.
+    """
+
+    response = ollama.chat(
+        model="llama3.2",
+        messages=[
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ]
+    )
+
+    return response["message"]["content"]
