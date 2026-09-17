@@ -26,3 +26,33 @@ def generate_youtube_idea(topic):
     )
 
     return response["message"]["content"]
+def generate_youtube_titles(idea):
+    """
+    Generates YouTube titles based on a video idea.
+    """
+
+    prompt = f"""
+    Generate 5 catchy YouTube titles based on this video idea:
+
+    {idea}
+
+    Make the titles:
+    - Clear and easy to understand
+    - Interesting and clickable
+    - Suitable for a YouTube audience
+    - Not misleading
+
+    Number each title.
+    """
+
+    response = ollama.chat(
+        model="llama3.2",
+        messages=[
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ]
+    )
+
+    return response["message"]["content"]
