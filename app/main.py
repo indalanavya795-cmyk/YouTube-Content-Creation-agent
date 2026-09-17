@@ -1,5 +1,4 @@
-from agent import generate_youtube_idea, generate_youtube_titles, generate_youtube_description
-
+from agent import generate_youtube_idea, generate_youtube_titles, generate_youtube_description, generate_youtube_hashtags
 print("🤖 Welcome to the YouTube Content Creation Agent!")
 
 topic = input("\nEnter a topic for your YouTube channel: ")
@@ -25,3 +24,9 @@ description = generate_youtube_description(idea)
 
 print("📝 YouTube description:\n")
 print(description)
+print("\nGenerating YouTube hashtags...\n")
+
+hashtags = generate_youtube_hashtags(idea)
+
+print("🏷️ YouTube hashtags:\n")
+print(hashtags)

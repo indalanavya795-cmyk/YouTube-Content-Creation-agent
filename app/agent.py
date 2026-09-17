@@ -87,3 +87,32 @@ def generate_youtube_description(idea):
     )
 
     return response["message"]["content"]
+def generate_youtube_hashtags(idea):
+    """
+    Generates relevant YouTube hashtags based on a video idea.
+    """
+
+    prompt = f"""
+    Generate 10 relevant YouTube hashtags for this video idea:
+
+    {idea}
+
+    Rules:
+    - Make them relevant to the topic
+    - Keep them short and useful
+    - Do not use spaces inside a hashtag
+    - Do not number them
+    - Put each hashtag on a separate line
+    """
+
+    response = ollama.chat(
+        model="llama3.2",
+        messages=[
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ]
+    )
+
+    return response["message"]["content"]
