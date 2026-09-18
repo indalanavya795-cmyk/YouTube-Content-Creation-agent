@@ -4,6 +4,7 @@ from agent import (
     generate_youtube_description,
     generate_youtube_hashtags,
     generate_youtube_script,
+    generate_thumbnail_ideas,
     save_youtube_content
 )
 
@@ -44,6 +45,13 @@ script = generate_youtube_script(idea)
 
 print("🎥 YouTube video script:\n")
 print(script)
+
+print("\nGenerating YouTube thumbnail ideas...\n")
+
+thumbnail_ideas = generate_thumbnail_ideas(idea)
+
+print("🖼️ YouTube thumbnail ideas:\n")
+print(thumbnail_ideas)
 print("\nSaving your YouTube content...\n")
 
 file_path = save_youtube_content(
@@ -51,7 +59,9 @@ file_path = save_youtube_content(
     titles,
     description,
     hashtags,
-    script
+    script,
+    thumbnail_ideas
 )
+    
 
 print(f"✅ Content saved to: {file_path}")

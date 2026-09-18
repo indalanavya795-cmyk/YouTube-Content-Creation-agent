@@ -151,7 +151,7 @@ def generate_youtube_script(idea):
     )
 
     return response["message"]["content"]
-def save_youtube_content(idea, titles, description, hashtags, script):
+def save_youtube_content(idea, titles, description, hashtags, script, thumbnail_ideas):
     """
     Saves generated YouTube content into a text file.
     """
@@ -183,5 +183,67 @@ def save_youtube_content(idea, titles, description, hashtags, script):
         file.write("VIDEO SCRIPT\n")
         file.write("-" * 20 + "\n")
         file.write(script + "\n")
+        file.write("\nTHUMBNAIL IDEAS\n")
+        file.write("-" * 20 + "\n")
+        file.write(thumbnail_ideas + "\n")
 
     return file_path
+    """
+    Generates YouTube thumbnail ideas based on a video idea.
+    """
+
+    prompt = f"""
+    Generate 5 creative YouTube thumbnail ideas for this video:
+
+    {idea}
+
+    Each thumbnail idea should include:
+    - Main visual
+    - Short text to display on the thumbnail
+    - Overall concept
+
+    Make them simple, eye-catching, and suitable for YouTube.
+    Number each idea.
+    """
+
+    response = ollama.chat(
+        model="llama3.2",
+        messages=[
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ]
+    )
+
+    return response["message"]["content"]
+def generate_thumbnail_ideas(idea):
+    """
+    Generates YouTube thumbnail ideas based on a video idea.
+    """
+
+    prompt = f"""
+    Generate 5 creative YouTube thumbnail ideas for this video:
+
+    {idea}
+
+    Each thumbnail idea should include:
+    - Main visual
+    - Short text to display on the thumbnail
+    - Overall concept
+
+    Make them simple, eye-catching, and suitable for YouTube.
+    Number each idea.
+    """
+
+    response = ollama.chat(
+        model="llama3.2",
+        messages=[
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ]
+    )
+
+    return response["message"]["content"]
