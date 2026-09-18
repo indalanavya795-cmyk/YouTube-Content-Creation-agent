@@ -3,6 +3,7 @@ from agent import (
     generate_youtube_titles,
     generate_youtube_description,
     generate_youtube_hashtags,
+        generate_youtube_keywords,
     generate_youtube_script,
     generate_thumbnail_ideas,
     save_youtube_content
@@ -39,6 +40,12 @@ hashtags = generate_youtube_hashtags(idea)
 
 print("🏷️ YouTube hashtags:\n")
 print(hashtags)
+print("\nGenerating YouTube keywords...\n")
+
+keywords = generate_youtube_keywords(idea)
+
+print("🔑 YouTube keywords:\n")
+print(keywords)
 print("\nGenerating YouTube script...\n")
 
 script = generate_youtube_script(idea)
@@ -59,6 +66,7 @@ file_path = save_youtube_content(
     titles,
     description,
     hashtags,
+    keywords,
     script,
     thumbnail_ideas
 )

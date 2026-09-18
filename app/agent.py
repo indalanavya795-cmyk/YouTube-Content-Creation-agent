@@ -148,10 +148,10 @@ def generate_youtube_script(idea):
                 "content": prompt
             }
         ]
-    )
-
+    ) 
+    return response["message"]["content"] 
     return response["message"]["content"]
-def save_youtube_content(idea, titles, description, hashtags, script, thumbnail_ideas):
+def save_youtube_content(idea, titles, description, hashtags, keywords, script, thumbnail_ideas):
     """
     Saves generated YouTube content into a text file.
     """
@@ -179,6 +179,9 @@ def save_youtube_content(idea, titles, description, hashtags, script, thumbnail_
         file.write("HASHTAGS\n")
         file.write("-" * 20 + "\n")
         file.write(hashtags + "\n\n")
+        file.write("YOUTUBE KEYWORDS\n")
+        file.write("-" * 20 + "\n")
+        file.write(keywords + "\n\n")
 
         file.write("VIDEO SCRIPT\n")
         file.write("-" * 20 + "\n")
@@ -188,6 +191,8 @@ def save_youtube_content(idea, titles, description, hashtags, script, thumbnail_
         file.write(thumbnail_ideas + "\n")
 
     return file_path
+    
+def generate_thumbnail_ideas(idea):
     """
     Generates YouTube thumbnail ideas based on a video idea.
     """
@@ -217,23 +222,22 @@ def save_youtube_content(idea, titles, description, hashtags, script, thumbnail_
     )
 
     return response["message"]["content"]
-def generate_thumbnail_ideas(idea):
+def generate_youtube_keywords(idea):
     """
-    Generates YouTube thumbnail ideas based on a video idea.
+    Generates relevant YouTube keywords/tags based on a video idea.
     """
 
     prompt = f"""
-    Generate 5 creative YouTube thumbnail ideas for this video:
+    Generate 15 relevant YouTube keywords/tags for this video idea:
 
     {idea}
 
-    Each thumbnail idea should include:
-    - Main visual
-    - Short text to display on the thumbnail
-    - Overall concept
-
-    Make them simple, eye-catching, and suitable for YouTube.
-    Number each idea.
+    Rules:
+    - Make them highly relevant to the topic
+    - Use short phrases
+    - Do not use hashtags
+    - Do not number them
+    - Put each keyword on a separate line
     """
 
     response = ollama.chat(
