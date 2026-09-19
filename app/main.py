@@ -6,6 +6,7 @@ from agent import (
         generate_youtube_keywords,
     generate_youtube_script,
     generate_thumbnail_ideas,
+        generate_thumbnail_image,
     save_youtube_content
 )
 
@@ -60,6 +61,11 @@ thumbnail_ideas = generate_thumbnail_ideas(idea)
 print("🖼️ YouTube thumbnail ideas:\n")
 print(thumbnail_ideas)
 print("\nSaving your YouTube content...\n")
+print("\nGenerating actual YouTube thumbnail image...\n")
+
+thumbnail_path = generate_thumbnail_image(idea)
+
+print(f"🖼️ Thumbnail image saved to: {thumbnail_path}")
 
 file_path = save_youtube_content(
     idea,
