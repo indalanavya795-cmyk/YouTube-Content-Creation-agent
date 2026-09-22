@@ -1,360 +1,245 @@
 import os
-import base64
-import requests
 import ollama
 
+MODEL = "llama3.2"
 
-# ============================================================
-# YOUTUBE VIDEO IDEA GENERATOR
-# ============================================================
 
-def generate_youtube_idea(topic):
-    """
-    Generates YouTube video ideas based on a topic.
-    """
-
-    prompt = f"""
-Generate 5 creative YouTube video ideas about:
-
-{topic}
-
-Make the ideas:
-- Interesting
-- Beginner-friendly
-- Engaging
-- Suitable for YouTube
-
-Number each idea.
-"""
-
+def ask_ai(prompt):
     response = ollama.chat(
-        model="llama3.2",
-        messages=[
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ]
+        model=MODEL,
+        messages=[{"role": "user", "content": prompt}]
     )
-
     return response["message"]["content"]
 
 
-# ============================================================
-# YOUTUBE TITLE GENERATOR
-# ============================================================
-
-def generate_youtube_titles(idea):
-    """
-    Generates YouTube titles based on a video idea.
-    """
-
+def generate_youtube_idea(topic, audience, tone, video_length, language):
     prompt = f"""
-Generate 5 catchy YouTube titles based on this video idea:
+Generate 5 creative YouTube video ideas.
 
-{idea}
+Topic: {topic}
+Target audience: {audience}
+Content style: {tone}
+Video length: {video_length}
+Language: {language}
 
-Make the titles:
-- Clear
-- Easy to understand
-- Interesting
-- Clickable
-- Suitable for YouTube
-- Not misleading
-
-Number each title.
+Make each idea specific, interesting, suitable for the requested
+audience and length, and write in the requested language.
+Number the ideas 1 to 5.
 """
-
-    response = ollama.chat(
-        model="llama3.2",
-        messages=[
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ]
-    )
-
-    return response["message"]["content"]
+    return ask_ai(prompt)
 
 
-# ============================================================
-# YOUTUBE DESCRIPTION GENERATOR
-# ============================================================
-
-def generate_youtube_description(idea):
-    """
-    Generates a YouTube video description.
-    """
-
+def generate_youtube_titles(idea, audience, tone, video_length, language):
     prompt = f"""
-Write an engaging YouTube video description for this video idea:
+Generate 5 catchy YouTube titles.
 
-{idea}
+Video idea: {idea}
+Target audience: {audience}
+Content style: {tone}
+Video length: {video_length}
+Language: {language}
 
-The description should:
-- Clearly explain what the video is about
-- Be friendly and engaging
-- Include relevant keywords naturally
-- Encourage viewers to watch
-- Be suitable for YouTube
-
-Keep it concise.
+Make them clear, interesting, clickable, suitable for YouTube,
+not misleading, and appropriate for the audience.
+Number them 1 to 5.
 """
-
-    response = ollama.chat(
-        model="llama3.2",
-        messages=[
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ]
-    )
-
-    return response["message"]["content"]
+    return ask_ai(prompt)
 
 
-# ============================================================
-# YOUTUBE HASHTAG GENERATOR
-# ============================================================
-
-def generate_youtube_hashtags(idea):
-    """
-    Generates relevant YouTube hashtags.
-    """
-
+def generate_youtube_description(idea, audience, tone, video_length, language):
     prompt = f"""
-Generate 10 relevant YouTube hashtags for this video idea:
+Write an engaging YouTube description.
 
-{idea}
+Video idea: {idea}
+Target audience: {audience}
+Content style: {tone}
+Video length: {video_length}
+Language: {language}
 
-Rules:
-- Make them relevant to the topic
-- Keep them short and useful
-- Do not use spaces inside a hashtag
-- Do not number them
-- Put each hashtag on a separate line
+Clearly explain the video, use relevant keywords naturally,
+encourage viewers to watch, and write in the requested language.
 """
-
-    response = ollama.chat(
-        model="llama3.2",
-        messages=[
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ]
-    )
-
-    return response["message"]["content"]
+    return ask_ai(prompt)
 
 
-# ============================================================
-# YOUTUBE KEYWORD GENERATOR
-# ============================================================
-
-def generate_youtube_keywords(idea):
-    """
-    Generates YouTube keywords/tags.
-    """
-
+def generate_youtube_hashtags(idea, audience, tone, video_length, language):
     prompt = f"""
-Generate 15 relevant YouTube keywords/tags for this video idea:
+Generate 10 relevant YouTube hashtags.
 
-{idea}
+Video idea: {idea}
+Target audience: {audience}
+Content style: {tone}
+Video length: {video_length}
+Language: {language}
 
-Rules:
-- Make them highly relevant to the topic
-- Use short phrases
-- Do not use hashtags
-- Do not number them
-- Put each keyword on a separate line
+Keep the hashtags relevant and suitable for YouTube.
 """
-
-    response = ollama.chat(
-        model="llama3.2",
-        messages=[
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ]
-    )
-
-    return response["message"]["content"]
+    return ask_ai(prompt)
 
 
-# ============================================================
-# YOUTUBE SCRIPT GENERATOR
-# ============================================================
-
-def generate_youtube_script(idea):
-    """
-    Generates a complete YouTube video script.
-    """
-
+def generate_youtube_keywords(idea, audience, tone, video_length, language):
     prompt = f"""
-Write a complete YouTube video script based on this idea:
+Generate 15 useful YouTube SEO keywords.
 
-{idea}
+Video idea: {idea}
+Target audience: {audience}
+Content style: {tone}
+Video length: {video_length}
+Language: {language}
 
-The script should include:
-- A strong opening hook
-- A short introduction
-- Clear main sections
-- Natural transitions
-- A friendly and engaging tone
-- A conclusion
-- A simple call to action asking viewers to like,
-  subscribe, and comment
-
-Make the script suitable for a beginner-friendly
-YouTube video.
-
-Do not include camera directions or complicated
-production instructions.
+Make them highly relevant to what the target audience may search.
+Number them 1 to 15.
 """
-
-    response = ollama.chat(
-        model="llama3.2",
-        messages=[
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ]
-    )
-
-    return response["message"]["content"]
+    return ask_ai(prompt)
 
 
-# ============================================================
-# THUMBNAIL IDEA GENERATOR
-# ============================================================
-
-def generate_thumbnail_ideas(idea):
-    """
-    Generates creative YouTube thumbnail ideas.
-    """
-
+def generate_youtube_script(idea, audience, tone, video_length, language):
     prompt = f"""
-Generate 5 creative YouTube thumbnail ideas for this video:
+Write a complete YouTube video script.
 
-{idea}
+Video idea: {idea}
+Target audience: {audience}
+Content style: {tone}
+Video length: {video_length}
+Language: {language}
 
-Each thumbnail idea should include:
-- Main visual
-- Short text to display on the thumbnail
-- Overall concept
+Include:
+- Strong introduction
+- Main content
+- Clear organization
+- Natural conclusion
 
-Make them:
-- Simple
-- Eye-catching
-- Professional
-- Suitable for YouTube
-
-Number each idea.
+Follow the requested length and language.
 """
-
-    response = ollama.chat(
-        model="llama3.2",
-        messages=[
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ]
-    )
-
-    return response["message"]["content"]
+    return ask_ai(prompt)
 
 
-# ============================================================
-# ACTUAL THUMBNAIL IMAGE GENERATOR
-# ============================================================
+def generate_thumbnail_ideas(idea, audience, tone, video_length, language):
+    prompt = f"""
+Generate 5 professional YouTube thumbnail ideas.
+
+Video idea: {idea}
+Target audience: {audience}
+Content style: {tone}
+Video length: {video_length}
+Language: {language}
+
+For each idea include the main visual, subject, background,
+composition, suggested text concept, and visual style.
+Make each idea different and suitable for YouTube.
+"""
+    return ask_ai(prompt)
+
 
 def generate_thumbnail_image(idea):
-    """
-    Generates a topic-specific YouTube thumbnail using
-    Llama 3.2 + Draw Things.
-    """
+    from app.image_generator import (
+        generate_thumbnail_image as generate_image
+    )
 
-    prompt_request = f"""
-Create a detailed image-generation prompt for a YouTube thumbnail
-based on this video idea:
+    prompt = f"""
+Create a professional YouTube thumbnail based on this idea:
 
 {idea}
 
-The image prompt must describe:
-- The main subject related directly to the video topic
-- Important objects related to the topic
-- A realistic environment
-- Professional photography
-- Natural realistic lighting
-- Strong visual focus
-- Clear composition suitable for YouTube
-- A visually interesting scene
-- Space for adding text later
-
-Make the result photorealistic and specific.
-Do not ask the image generator to create text or words.
-Return only the image-generation prompt.
+Photorealistic, professional photography, strong visual focus,
+clear composition, cinematic lighting, detailed environment.
+No text, letters, words, logos, or watermark.
 """
+    return generate_image(prompt)
 
-    prompt_response = ollama.chat(
-        model="llama3.2",
-        messages=[
-            {
-                "role": "user",
-                "content": prompt_request
-            }
-        ]
-    )
 
-    image_prompt = prompt_response["message"]["content"]
+def generate_scene_by_scene_script(idea, audience, tone, video_length, language):
+    prompt = f"""
+Create a detailed scene-by-scene YouTube video plan.
 
-    response = requests.post(
-        "http://127.0.0.1:7860/sdapi/v1/txt2img",
-        json={
-            "prompt": image_prompt,
-            "negative_prompt": (
-                "cartoon, anime, illustration, painting, digital art, "
-                "CGI, 3D render, fantasy, unrealistic, distorted, "
-                "deformed, blurry, low quality, text, letters, words, "
-                "watermark, logo"
-            ),
-            "width": 768,
-            "height": 432,
-            "steps": 12,
-            "batch_size": 1
-        },
-        timeout=300
-    )
+Video idea: {idea}
+Target audience: {audience}
+Content style: {tone}
+Video length: {video_length}
+Language: {language}
 
-    response.raise_for_status()
+For every scene include:
+- Scene number
+- Approximate duration
+- Visual/action
+- Voice-over/dialogue
+- On-screen text
 
-    data = response.json()
+Cover the requested video length and write in the requested language.
+"""
+    return ask_ai(prompt)
 
-    if "images" not in data or not data["images"]:
-        raise RuntimeError(
-            "Draw Things did not return an image."
-        )
 
-    image_data = base64.b64decode(data["images"][0])
+def generate_youtube_shorts(idea, audience, tone, language):
+    prompt = f"""
+Create a YouTube Shorts script.
 
-    os.makedirs("outputs", exist_ok=True)
+Video idea: {idea}
+Target audience: {audience}
+Content style: {tone}
+Language: {language}
 
-    file_path = "outputs/thumbnail.png"
+Start with a strong hook, keep it fast and engaging,
+and finish with a natural call to action.
+"""
+    return ask_ai(prompt)
 
-    with open(file_path, "wb") as file:
-        file.write(image_data)
 
-    return file_path
+def generate_instagram_reel(idea, audience, tone, language):
+    prompt = f"""
+Create an Instagram Reel script.
 
-# ============================================================
-# SAVE ALL GENERATED CONTENT
-# ============================================================
+Video idea: {idea}
+Target audience: {audience}
+Content style: {tone}
+Language: {language}
+
+Include an attention-grabbing hook, short engaging sections,
+visual suggestions, and a natural call to action.
+"""
+    return ask_ai(prompt)
+
+
+def generate_repurposed_content(idea, script, audience, tone, language):
+    prompt = f"""
+Repurpose this YouTube video into social media content.
+
+Video idea: {idea}
+Original script: {script}
+Target audience: {audience}
+Content style: {tone}
+Language: {language}
+
+Create:
+1. YouTube Shorts version
+2. Instagram Reel version
+3. Instagram caption
+4. LinkedIn post
+5. Promotional post
+"""
+    return ask_ai(prompt)
+
+
+def generate_seo_analysis(idea, titles, keywords, description):
+    prompt = f"""
+Analyze the SEO of this YouTube content.
+
+Video idea: {idea}
+Titles: {titles}
+Keywords: {keywords}
+Description: {description}
+
+Provide:
+1. Title SEO analysis
+2. Keyword relevance
+3. Description SEO analysis
+4. Search intent
+5. Missing keywords
+6. Suggested improvements
+7. SEO recommendations
+"""
+    return ask_ai(prompt)
+
 
 def save_youtube_content(
     idea,
@@ -365,48 +250,18 @@ def save_youtube_content(
     script,
     thumbnail_ideas
 ):
-    """
-    Saves all generated YouTube content into a text file.
-    """
-
     os.makedirs("outputs", exist_ok=True)
 
     file_path = "outputs/youtube_content.txt"
 
     with open(file_path, "w", encoding="utf-8") as file:
-
-        file.write(
-            "YOUTUBE CONTENT CREATION AGENT\n"
-        )
-
-        file.write("=" * 40 + "\n\n")
+        file.write("YOUTUBE CONTENT\n")
+        file.write("============================\n\n")
 
         file.write("VIDEO IDEA\n")
-        file.write("-" * 20 + "\n")
+        file.write("----------------------------\n")
         file.write(idea + "\n\n")
 
-        file.write("YOUTUBE TITLES\n")
-        file.write("-" * 20 + "\n")
-        file.write(titles + "\n\n")
-
-        file.write("DESCRIPTION\n")
-        file.write("-" * 20 + "\n")
-        file.write(description + "\n\n")
-
-        file.write("HASHTAGS\n")
-        file.write("-" * 20 + "\n")
-        file.write(hashtags + "\n\n")
-
-        file.write("YOUTUBE KEYWORDS\n")
-        file.write("-" * 20 + "\n")
-        file.write(keywords + "\n\n")
-
-        file.write("VIDEO SCRIPT\n")
-        file.write("-" * 20 + "\n")
-        file.write(script + "\n\n")
-
-        file.write("THUMBNAIL IDEAS\n")
-        file.write("-" * 20 + "\n")
-        file.write(thumbnail_ideas + "\n")
-
-    return file_path
+        file.write("TITLES\n")
+        file.write("----------------------------\n")
+        file
