@@ -6,6 +6,7 @@ import tempfile
 from pathlib import Path
 
 import streamlit as st
+from thumbnail_maker import create_thumbnail
 
 from agent import (
     generate_content_strategy,
@@ -1083,6 +1084,44 @@ with tool_tabs[5]:
             result,
             language=None,
         )
+
+        # Create an actual thumbnail locally
+        thumbnail_path = OUTPUT_DIR / "thumbnail.png"
+
+        try:
+
+            create_thumbnail(
+                topic=topic,
+                headline=f"{topic} — WATCH THIS",
+                output_path=str(thumbnail_path),
+            )
+
+            st.subheader("🖼️ Generated Thumbnail")
+
+            st.image(
+                str(thumbnail_path),
+                caption="AI Content Studio Thumbnail",
+                use_container_width=True,
+            )
+
+            with open(
+                thumbnail_path,
+                "rb",
+            ) as image_file:
+
+                st.download_button(
+                    "⬇️ Download Thumbnail",
+                    image_file,
+                    file_name="youtube_thumbnail.png",
+                    mime="image/png",
+                    use_container_width=True,
+                )
+
+        except Exception as error:
+
+            st.error(
+                f"Thumbnail creation failed: {error}"
+            )
 
 
 # ============================================================
