@@ -1,182 +1,279 @@
-import streamlit as st
 import json
-from datetime import datetime
-from io import BytesIO
+import os
+import re
+import subprocess
+import tempfile
+from pathlib import Path
 
-from reportlab.lib.pagesizes import A4
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
-from reportlab.lib.styles import getSampleStyleSheet
-from docx import Document
+import streamlit as st
 
 from agent import (
-    generate_youtube_idea,
-    generate_youtube_titles,
-    generate_youtube_description,
-    generate_youtube_hashtags,
-    generate_youtube_keywords,
-    generate_youtube_script,
+    generate_content_strategy,
+    generate_video_idea,
+    generate_titles,
+    generate_hooks,
+    generate_description,
+    generate_hashtags,
+    generate_keywords,
+    generate_script,
+    generate_storyboard,
+    generate_visual_plan,
     generate_thumbnail_ideas,
-    generate_scene_by_scene_script,
-    generate_youtube_shorts,
+    generate_scene_plan,
+    generate_youtube_short,
     generate_instagram_reel,
     generate_repurposed_content,
     generate_seo_analysis,
-    save_youtube_content
+    generate_content_factory,
 )
 
 
 # ============================================================
-# PAGE CONFIGURATION
+# PAGE CONFIG
 # ============================================================
 
 st.set_page_config(
-    page_title="YouTube Content Creation Agent",
+    page_title="AI Content Studio",
     page_icon="🎬",
     layout="wide",
-    initial_sidebar_state="expanded"
 )
 
 
 # ============================================================
-# HISTORY FUNCTIONS
+# PATHS
 # ============================================================
 
-HISTORY_FILE = "data/content_history.json"
+BASE_DIR = Path(__file__).resolve().parent.parent
 
+DATA_DIR = BASE_DIR / "data"
+OUTPUT_DIR = BASE_DIR / "outputs"
 
-def load_history():
-    try:
-        with open(HISTORY_FILE, "r", encoding="utf-8") as file:
-            return json.load(file)
-    except (FileNotFoundError, json.JSONDecodeError):
-        return []
+HISTORY_FILE = DATA_DIR / "content_history.json"
 
-
-def save_history(project):
-    history = load_history()
-    history.insert(0, project)
-
-    with open(HISTORY_FILE, "w", encoding="utf-8") as file:
-        json.dump(
-            history,
-            file,
-            indent=4,
-            ensure_ascii=False
-        )
-
-
-# ============================================================
-# PDF EXPORT
-# ============================================================
-
-def create_pdf(content):
-    buffer = BytesIO()
-
-    document = SimpleDocTemplate(
-        buffer,
-        pagesize=A4,
-        rightMargin=40,
-        leftMargin=40,
-        topMargin=40,
-        bottomMargin=40
-    )
-
-    styles = getSampleStyleSheet()
-    story = []
-
-    for section in content.split("\n\n"):
-        if section.strip():
-
-            text = section.replace("&", "&amp;")
-            text = text.replace("<", "&lt;")
-            text = text.replace(">", "&gt;")
-            text = text.replace("\n", "<br/>")
-
-            story.append(
-                Paragraph(
-                    text,
-                    styles["BodyText"]
-                )
-            )
-
-            story.append(
-                Spacer(1, 10)
-            )
-
-    document.build(story)
-
-    buffer.seek(0)
-
-    return buffer.getvalue()
-
-
-# ============================================================
-# DOCX EXPORT
-# ============================================================
-
-def create_docx(content):
-    document = Document()
-
-    document.add_heading(
-        "YouTube Content Creation Agent",
-        level=1
-    )
-
-    for section in content.split("\n\n"):
-        if section.strip():
-            document.add_paragraph(section)
-
-    buffer = BytesIO()
-
-    document.save(buffer)
-
-    buffer.seek(0)
-
-    return buffer.getvalue()
+DATA_DIR.mkdir(exist_ok=True)
+OUTPUT_DIR.mkdir(exist_ok=True)
 
 
 # ============================================================
 # SESSION STATE
 # ============================================================
 
-default_states = {
-    "ideas": "",
-    "selected_idea": "",
+DEFAULT_STATE = {
+    "idea": "",
+    "strategy": "",
     "titles": "",
+    "hooks": "",
     "description": "",
     "hashtags": "",
     "keywords": "",
     "script": "",
+    "storyboard": "",
+    "visual_plan": "",
     "thumbnail_ideas": "",
     "scene_plan": "",
     "shorts": "",
     "reel": "",
     "repurposed": "",
-    "seo": ""
+    "seo": "",
+    "factory_completed": False,
 }
 
+for key, value in DEFAULT_STATE.items():
 
-for key, value in default_states.items():
     if key not in st.session_state:
         st.session_state[key] = value
 
 
 # ============================================================
-# HEADER
+# HISTORY
 # ============================================================
 
-st.title("🎬 YouTube Content Creation Agent")
+def load_history():
 
-st.markdown(
-    """
-    ### Create complete YouTube content with AI
+    if not HISTORY_FILE.exists():
+        return []
 
-    Generate video ideas, titles, descriptions, scripts, SEO content,
-    thumbnails ideas and social-media content from one place.
-    """
-)
+    try:
 
-st.divider()
+        with open(
+            HISTORY_FILE,
+            "r",
+            encoding="utf-8",
+        ) as file:
+
+            data = json.load(file)
+
+        if isinstance(data, list):
+            return data
+
+        return []
+
+    except Exception:
+        return []
+
+
+def save_history(project):
+
+    history = load_history()
+
+    history.append(project)
+
+    with open(
+        HISTORY_FILE,
+        "w",
+        encoding="utf-8",
+    ) as file:
+
+        json.dump(
+            history,
+            file,
+            indent=4,
+            ensure_ascii=False,
+        )
+
+
+# ============================================================
+# CURRENT CONTENT
+# ============================================================
+
+def get_current_content():
+
+    return {
+        "idea": st.session_state.get(
+            "idea",
+            "",
+        ),
+        "strategy": st.session_state.get(
+            "strategy",
+            "",
+        ),
+        "titles": st.session_state.get(
+            "titles",
+            "",
+        ),
+        "hooks": st.session_state.get(
+            "hooks",
+            "",
+        ),
+        "description": st.session_state.get(
+            "description",
+            "",
+        ),
+        "hashtags": st.session_state.get(
+            "hashtags",
+            "",
+        ),
+        "keywords": st.session_state.get(
+            "keywords",
+            "",
+        ),
+        "script": st.session_state.get(
+            "script",
+            "",
+        ),
+        "storyboard": st.session_state.get(
+            "storyboard",
+            "",
+        ),
+        "visual_plan": st.session_state.get(
+            "visual_plan",
+            "",
+        ),
+        "thumbnail_ideas": st.session_state.get(
+            "thumbnail_ideas",
+            "",
+        ),
+        "scene_plan": st.session_state.get(
+            "scene_plan",
+            "",
+        ),
+        "shorts": st.session_state.get(
+            "shorts",
+            "",
+        ),
+        "reel": st.session_state.get(
+            "reel",
+            "",
+        ),
+        "repurposed": st.session_state.get(
+            "repurposed",
+            "",
+        ),
+        "seo": st.session_state.get(
+            "seo",
+            "",
+        ),
+    }
+
+
+# ============================================================
+# SAVE PROJECT
+# ============================================================
+
+def save_current_project(
+    topic,
+    audience,
+    tone,
+    video_length,
+    language,
+):
+
+    project = {
+        "topic": topic,
+        "audience": audience,
+        "tone": tone,
+        "video_length": video_length,
+        "language": language,
+        "content": get_current_content(),
+    }
+
+    save_history(project)
+
+
+# ============================================================
+# SIMPLE TEXT EXPORT
+# ============================================================
+
+def build_text_export():
+
+    content = get_current_content()
+
+    sections = [
+        ("CONTENT IDEA", content["idea"]),
+        ("CONTENT STRATEGY", content["strategy"]),
+        ("TITLES", content["titles"]),
+        ("HOOKS", content["hooks"]),
+        ("DESCRIPTION", content["description"]),
+        ("HASHTAGS", content["hashtags"]),
+        ("KEYWORDS", content["keywords"]),
+        ("FULL SCRIPT", content["script"]),
+        ("STORYBOARD", content["storyboard"]),
+        ("VISUAL PLAN", content["visual_plan"]),
+        ("THUMBNAIL IDEAS", content["thumbnail_ideas"]),
+        ("SCENE PLAN", content["scene_plan"]),
+        ("YOUTUBE SHORT", content["shorts"]),
+        ("INSTAGRAM REEL", content["reel"]),
+        ("REPURPOSED CONTENT", content["repurposed"]),
+        ("SEO ANALYSIS", content["seo"]),
+    ]
+
+    output = []
+
+    for title, text in sections:
+
+        output.append(
+            "\n"
+            + "=" * 70
+            + "\n"
+            + title
+            + "\n"
+            + "=" * 70
+            + "\n"
+            + str(text)
+            + "\n"
+        )
+
+    return "\n".join(output)
 
 
 # ============================================================
@@ -185,35 +282,46 @@ st.divider()
 
 with st.sidebar:
 
-    st.header("⚙️ Video Settings")
+    st.title("⚙️ Content Settings")
 
     topic = st.text_input(
         "📌 YouTube Topic",
-        placeholder="Example: AI tools for students"
+        value="GRWM college morning routine",
     )
 
     audience = st.selectbox(
         "🎯 Target Audience",
         [
-            "General Audience",
             "College Students",
+            "Teenagers",
+            "Young Adults",
+            "Working Professionals",
             "Beginners",
-            "Professionals",
+            "General Audience",
             "Content Creators",
-            "Entrepreneurs"
-        ]
+        ],
     )
 
     tone = st.selectbox(
         "🎭 Content Style",
         [
-            "Informative",
-            "Professional",
             "Friendly",
+            "Professional",
+            "Educational",
             "Funny",
+            "Energetic",
+            "Inspirational",
             "Storytelling",
-            "Energetic"
-        ]
+        ],
+    )
+
+    platform = st.selectbox(
+        "📱 Main Platform",
+        [
+            "YouTube",
+            "YouTube Shorts",
+            "Instagram Reels",
+        ],
     )
 
     video_length = st.selectbox(
@@ -221,8 +329,9 @@ with st.sidebar:
         [
             "Short (1–3 minutes)",
             "Medium (5–8 minutes)",
-            "Long (10–15 minutes)"
-        ]
+            "Long (10–15 minutes)",
+            "Very Long (20+ minutes)",
+        ],
     )
 
     language = st.selectbox(
@@ -232,478 +341,924 @@ with st.sidebar:
             "Telugu",
             "Hindi",
             "Tamil",
-            "Kannada"
-        ]
+            "Kannada",
+            "Malayalam",
+        ],
     )
 
     st.divider()
 
     st.info(
-        "💡 Tip: Choose a specific topic for better AI-generated content."
+        "💡 Enter a specific topic for more useful "
+        "AI-generated content."
     )
 
 
 # ============================================================
-# VIDEO IDEA GENERATION
+# HEADER
 # ============================================================
 
-st.header("💡 Generate Video Ideas")
+st.title("🎬 AI Content Studio")
+
+st.write(
+    "Turn one idea into a complete "
+    "multi-platform content production package."
+)
+
+st.markdown(
+    """
+### 🚀 From Idea → Production
+
+**Topic → Strategy → Script → Storyboard → Visual Plan
+→ Short/Reel → SEO → Export**
+
+This is more than a text generator.
+
+The AI creates a **production blueprint** for your video,
+including scenes, camera directions, voice-over,
+on-screen text and visual-generation prompts.
+"""
+)
+
+
+# ============================================================
+# MAIN ACTION
+# ============================================================
+
+st.divider()
+
+st.subheader("🚀 Create Complete Content")
 
 if st.button(
-    "✨ Generate Video Ideas",
-    use_container_width=True
+    "🚀 CREATE COMPLETE CONTENT",
+    use_container_width=True,
+    type="primary",
 ):
 
     if not topic.strip():
 
         st.warning(
-            "Please enter a YouTube topic in the sidebar."
+            "Please enter a topic first."
         )
 
     else:
 
-        with st.spinner("Generating creative video ideas..."):
+        progress = st.progress(0)
 
-            st.session_state["ideas"] = generate_youtube_idea(
+        status = st.empty()
+
+        try:
+
+            status.info(
+                "🧠 Creating content strategy..."
+            )
+
+            strategy = generate_content_strategy(
+                topic,
+                audience,
+                tone,
+                platform,
+            )
+
+            st.session_state["strategy"] = strategy
+
+            progress.progress(10)
+
+            status.info(
+                "💡 Creating video ideas..."
+            )
+
+            idea = generate_video_idea(
+                topic,
+                audience,
+                tone,
+            )
+
+            st.session_state["idea"] = idea
+
+            progress.progress(20)
+
+            status.info(
+                "🎯 Creating titles and hooks..."
+            )
+
+            st.session_state["titles"] = (
+                generate_titles(
+                    topic,
+                    audience,
+                    tone,
+                )
+            )
+
+            st.session_state["hooks"] = (
+                generate_hooks(topic)
+            )
+
+            progress.progress(30)
+
+            status.info(
+                "✍️ Writing the complete script..."
+            )
+
+            script = generate_script(
                 topic,
                 audience,
                 tone,
                 video_length,
-                language
+                language,
             )
 
-        st.success("Video ideas generated!")
+            st.session_state["script"] = script
 
+            progress.progress(45)
 
-if st.session_state["ideas"]:
+            status.info(
+                "🎬 Building storyboard..."
+            )
 
-    st.subheader("🎯 Generated Ideas")
+            storyboard = generate_storyboard(
+                topic,
+                script,
+                video_length,
+            )
 
-    st.code(
-        st.session_state["ideas"],
-        language=None
-    )
+            st.session_state[
+                "storyboard"
+            ] = storyboard
 
-    selected_idea = st.text_area(
-        "✏️ Enter the video idea you want to use",
-        value=st.session_state["selected_idea"],
-        height=100
-    )
+            progress.progress(60)
 
-    st.session_state["selected_idea"] = selected_idea
+            status.info(
+                "🖼️ Planning visual assets..."
+            )
+
+            st.session_state[
+                "visual_plan"
+            ] = generate_visual_plan(
+                topic,
+                storyboard,
+            )
+
+            st.session_state[
+                "scene_plan"
+            ] = generate_scene_plan(
+                topic,
+                video_length,
+            )
+
+            st.session_state[
+                "thumbnail_ideas"
+            ] = generate_thumbnail_ideas(
+                topic
+            )
+
+            progress.progress(70)
+
+            status.info(
+                "📱 Creating short-form content..."
+            )
+
+            st.session_state[
+                "shorts"
+            ] = generate_youtube_short(topic)
+
+            st.session_state[
+                "reel"
+            ] = generate_instagram_reel(topic)
+
+            st.session_state[
+                "repurposed"
+            ] = generate_repurposed_content(
+                topic
+            )
+
+            progress.progress(82)
+
+            status.info(
+                "🔍 Running SEO analysis..."
+            )
+
+            st.session_state[
+                "description"
+            ] = generate_description(topic)
+
+            st.session_state[
+                "hashtags"
+            ] = generate_hashtags(topic)
+
+            st.session_state[
+                "keywords"
+            ] = generate_keywords(topic)
+
+            st.session_state[
+                "seo"
+            ] = generate_seo_analysis(
+                topic,
+                st.session_state["titles"],
+                st.session_state["description"],
+                st.session_state["keywords"],
+            )
+
+            progress.progress(100)
+
+            st.session_state[
+                "factory_completed"
+            ] = True
+
+            status.success(
+                "🎉 Complete production package created!"
+            )
+
+        except Exception as error:
+
+            st.session_state[
+                "factory_completed"
+            ] = False
+
+            progress.empty()
+
+            status.error(
+                f"❌ Generation failed: {error}"
+            )
 
 
 # ============================================================
-# COMPLETE CONTENT GENERATION
+# RESULTS
 # ============================================================
 
-st.divider()
-
-st.header("🎬 Generate Complete YouTube Content")
-
-if st.button(
-    "🚀 Generate Complete Content",
-    use_container_width=True
+if st.session_state.get(
+    "factory_completed"
 ):
-
-    if not st.session_state["selected_idea"].strip():
-
-        st.warning(
-            "Please enter or select a video idea first."
-        )
-
-    else:
-
-        idea = st.session_state["selected_idea"]
-
-        with st.spinner("Creating your complete YouTube content..."):
-
-            st.session_state["titles"] = generate_youtube_titles(
-                idea,
-                audience,
-                tone,
-                video_length,
-                language
-            )
-
-            st.session_state["description"] = generate_youtube_description(
-                idea,
-                audience,
-                tone,
-                video_length,
-                language
-            )
-
-            st.session_state["hashtags"] = generate_youtube_hashtags(
-                idea,
-                audience,
-                tone,
-                video_length,
-                language
-            )
-
-            st.session_state["keywords"] = generate_youtube_keywords(
-                idea,
-                audience,
-                tone,
-                video_length,
-                language
-            )
-
-            st.session_state["script"] = generate_youtube_script(
-                idea,
-                audience,
-                tone,
-                video_length,
-                language
-            )
-
-            st.session_state["thumbnail_ideas"] = generate_thumbnail_ideas(
-                idea,
-                audience,
-                tone,
-                video_length,
-                language
-            )
-
-        st.success(
-            "Complete YouTube content generated successfully!"
-        )
-
-
-# ============================================================
-# DISPLAY COMPLETE CONTENT
-# ============================================================
-
-if st.session_state["titles"]:
 
     st.divider()
 
-    st.header("📦 Generated YouTube Content")
+    st.header(
+        "📦 Complete Production Package"
+    )
 
-    with st.expander("🎯 Titles", expanded=True):
+    st.success(
+        "Your topic has been transformed into "
+        "a complete content-production blueprint."
+    )
 
-        st.code(
-            st.session_state["titles"],
-            language=None
+    tabs = st.tabs(
+        [
+            "🧠 Strategy",
+            "✍️ Script",
+            "🎬 Storyboard",
+            "🖼️ Visuals",
+            "📱 Social",
+            "🔍 SEO",
+        ]
+    )
+
+    # ========================================================
+    # STRATEGY
+    # ========================================================
+
+    with tabs[0]:
+
+        st.subheader(
+            "🧠 Content Strategy"
         )
 
-    with st.expander("📄 Description"):
-
-        st.code(
-            st.session_state["description"],
-            language=None
+        st.write(
+            st.session_state[
+                "strategy"
+            ]
         )
 
-    with st.expander("#️⃣ Hashtags"):
-
-        st.code(
-            st.session_state["hashtags"],
-            language=None
+        st.subheader(
+            "💡 Video Ideas"
         )
 
-    with st.expander("🔎 Keywords"):
-
         st.code(
-            st.session_state["keywords"],
-            language=None
+            st.session_state[
+                "idea"
+            ],
+            language=None,
         )
 
-    with st.expander("🎬 Full Script"):
-
-        st.code(
-            st.session_state["script"],
-            language=None
+        st.subheader(
+            "🎯 Titles"
         )
 
-    with st.expander("🖼️ Thumbnail Ideas"):
+        st.code(
+            st.session_state[
+                "titles"
+            ],
+            language=None,
+        )
+
+        st.subheader(
+            "🪝 Hooks"
+        )
 
         st.code(
-            st.session_state["thumbnail_ideas"],
-            language=None
+            st.session_state[
+                "hooks"
+            ],
+            language=None,
+        )
+
+    # ========================================================
+    # SCRIPT
+    # ========================================================
+
+    with tabs[1]:
+
+        st.subheader(
+            "📜 Full YouTube Script"
+        )
+
+        st.code(
+            st.session_state[
+                "script"
+            ],
+            language=None,
+        )
+
+    # ========================================================
+    # STORYBOARD
+    # ========================================================
+
+    with tabs[2]:
+
+        st.subheader(
+            "🎬 Production Storyboard"
+        )
+
+        st.write(
+            st.session_state[
+                "storyboard"
+            ]
+        )
+
+        st.subheader(
+            "🎞️ Scene Plan"
+        )
+
+        st.code(
+            st.session_state[
+                "scene_plan"
+            ],
+            language=None,
+        )
+
+    # ========================================================
+    # VISUALS
+    # ========================================================
+
+    with tabs[3]:
+
+        st.subheader(
+            "🖼️ Visual Asset Plan"
+        )
+
+        st.write(
+            st.session_state[
+                "visual_plan"
+            ]
+        )
+
+        st.subheader(
+            "🖼️ Thumbnail Concepts"
+        )
+
+        st.code(
+            st.session_state[
+                "thumbnail_ideas"
+            ],
+            language=None,
+        )
+
+    # ========================================================
+    # SOCIAL
+    # ========================================================
+
+    with tabs[4]:
+
+        st.subheader(
+            "📱 YouTube Short"
+        )
+
+        st.code(
+            st.session_state[
+                "shorts"
+            ],
+            language=None,
+        )
+
+        st.subheader(
+            "📸 Instagram Reel"
+        )
+
+        st.code(
+            st.session_state[
+                "reel"
+            ],
+            language=None,
+        )
+
+        st.subheader(
+            "🔄 Repurposed Content"
+        )
+
+        st.code(
+            st.session_state[
+                "repurposed"
+            ],
+            language=None,
+        )
+
+    # ========================================================
+    # SEO
+    # ========================================================
+
+    with tabs[5]:
+
+        st.subheader(
+            "📝 Description"
+        )
+
+        st.code(
+            st.session_state[
+                "description"
+            ],
+            language=None,
+        )
+
+        st.subheader(
+            "#️⃣ Hashtags"
+        )
+
+        st.code(
+            st.session_state[
+                "hashtags"
+            ],
+            language=None,
+        )
+
+        st.subheader(
+            "🔑 Keywords"
+        )
+
+        st.code(
+            st.session_state[
+                "keywords"
+            ],
+            language=None,
+        )
+
+        st.subheader(
+            "🔍 SEO Analysis"
+        )
+
+        st.write(
+            st.session_state[
+                "seo"
+            ]
         )
 
 
 # ============================================================
-# ADDITIONAL CONTENT TOOLS
+# INDIVIDUAL TOOLS
 # ============================================================
 
 st.divider()
 
-st.header("🛠️ Additional Content Tools")
+st.header(
+    "🛠️ Individual Production Tools"
+)
+
+st.write(
+    "Generate or regenerate one part of the "
+    "production pipeline without creating everything."
+)
 
 
-# ------------------------------------------------------------
-# SCENE BY SCENE
-# ------------------------------------------------------------
+tool_tabs = st.tabs(
+    [
+        "💡 Ideas",
+        "🎯 Titles",
+        "🪝 Hooks",
+        "📜 Script",
+        "🎬 Storyboard",
+        "🖼️ Visuals",
+        "📱 Short/Reel",
+        "🔍 SEO",
+    ]
+)
 
-if st.button(
-    "🎞️ Generate Scene-by-Scene Plan",
-    use_container_width=True
-):
 
-    if not st.session_state["selected_idea"].strip():
+# ============================================================
+# IDEAS
+# ============================================================
 
-        st.warning(
-            "Please select a video idea first."
+with tool_tabs[0]:
+
+    if st.button(
+        "💡 Generate Video Ideas",
+        key="individual_ideas",
+        use_container_width=True,
+    ):
+
+        with st.spinner(
+            "Creating video ideas..."
+        ):
+
+            result = generate_video_idea(
+                topic,
+                audience,
+                tone,
+            )
+
+        st.session_state[
+            "idea"
+        ] = result
+
+        st.code(
+            result,
+            language=None,
         )
 
-    else:
 
-        with st.spinner("Creating scene-by-scene plan..."):
+# ============================================================
+# TITLES
+# ============================================================
 
-            st.session_state["scene_plan"] = (
-                generate_scene_by_scene_script(
-                    st.session_state["selected_idea"],
-                    audience,
-                    tone,
+with tool_tabs[1]:
+
+    if st.button(
+        "🎯 Generate Titles",
+        key="individual_titles",
+        use_container_width=True,
+    ):
+
+        with st.spinner(
+            "Creating titles..."
+        ):
+
+            result = generate_titles(
+                topic,
+                audience,
+                tone,
+            )
+
+        st.session_state[
+            "titles"
+        ] = result
+
+        st.code(
+            result,
+            language=None,
+        )
+
+
+# ============================================================
+# HOOKS
+# ============================================================
+
+with tool_tabs[2]:
+
+    if st.button(
+        "🪝 Generate Hooks",
+        key="individual_hooks",
+        use_container_width=True,
+    ):
+
+        with st.spinner(
+            "Creating hooks..."
+        ):
+
+            result = generate_hooks(topic)
+
+        st.session_state[
+            "hooks"
+        ] = result
+
+        st.code(
+            result,
+            language=None,
+        )
+
+
+# ============================================================
+# SCRIPT
+# ============================================================
+
+with tool_tabs[3]:
+
+    if st.button(
+        "📜 Generate Full Script",
+        key="individual_script",
+        use_container_width=True,
+    ):
+
+        with st.spinner(
+            "Writing script..."
+        ):
+
+            result = generate_script(
+                topic,
+                audience,
+                tone,
+                video_length,
+                language,
+            )
+
+        st.session_state[
+            "script"
+        ] = result
+
+        st.code(
+            result,
+            language=None,
+        )
+
+
+# ============================================================
+# STORYBOARD
+# ============================================================
+
+with tool_tabs[4]:
+
+    if st.button(
+        "🎬 Generate Storyboard",
+        key="individual_storyboard",
+        use_container_width=True,
+    ):
+
+        script = st.session_state.get(
+            "script",
+            "",
+        )
+
+        if not script:
+
+            st.warning(
+                "Generate a script first."
+            )
+
+        else:
+
+            with st.spinner(
+                "Building production storyboard..."
+            ):
+
+                result = generate_storyboard(
+                    topic,
+                    script,
                     video_length,
-                    language
                 )
-            )
 
-        st.success("Scene-by-scene plan generated!")
+            st.session_state[
+                "storyboard"
+            ] = result
+
+            st.write(result)
 
 
-if st.session_state["scene_plan"]:
+# ============================================================
+# VISUALS
+# ============================================================
 
-    with st.expander(
-        "🎞️ Scene-by-Scene Plan",
-        expanded=True
+with tool_tabs[5]:
+
+    if st.button(
+        "🖼️ Generate Visual Plan",
+        key="individual_visuals",
+        use_container_width=True,
     ):
 
-        st.code(
-            st.session_state["scene_plan"],
-            language=None
+        storyboard = st.session_state.get(
+            "storyboard",
+            "",
         )
 
+        if not storyboard:
 
-# ------------------------------------------------------------
-# YOUTUBE SHORTS
-# ------------------------------------------------------------
-
-if st.button(
-    "⚡ Generate YouTube Short",
-    use_container_width=True
-):
-
-    if not st.session_state["selected_idea"].strip():
-
-        st.warning(
-            "Please select a video idea first."
-        )
-
-    else:
-
-        with st.spinner("Creating YouTube Short..."):
-
-            st.session_state["shorts"] = generate_youtube_shorts(
-                st.session_state["selected_idea"],
-                audience,
-                tone,
-                language
+            st.warning(
+                "Generate a storyboard first."
             )
 
-        st.success("YouTube Short generated!")
+        else:
 
+            with st.spinner(
+                "Planning visual assets..."
+            ):
 
-if st.session_state["shorts"]:
-
-    with st.expander(
-        "⚡ YouTube Short",
-        expanded=True
-    ):
-
-        st.code(
-            st.session_state["shorts"],
-            language=None
-        )
-
-
-# ------------------------------------------------------------
-# INSTAGRAM REEL
-# ------------------------------------------------------------
-
-if st.button(
-    "📱 Generate Instagram Reel",
-    use_container_width=True
-):
-
-    if not st.session_state["selected_idea"].strip():
-
-        st.warning(
-            "Please select a video idea first."
-        )
-
-    else:
-
-        with st.spinner("Creating Instagram Reel..."):
-
-            st.session_state["reel"] = generate_instagram_reel(
-                st.session_state["selected_idea"],
-                audience,
-                tone,
-                language
-            )
-
-        st.success("Instagram Reel generated!")
-
-
-if st.session_state["reel"]:
-
-    with st.expander(
-        "📱 Instagram Reel",
-        expanded=True
-    ):
-
-        st.code(
-            st.session_state["reel"],
-            language=None
-        )
-
-
-# ------------------------------------------------------------
-# CONTENT REPURPOSING
-# ------------------------------------------------------------
-
-if st.button(
-    "🔄 Repurpose Content",
-    use_container_width=True
-):
-
-    if not st.session_state["selected_idea"].strip():
-
-        st.warning(
-            "Please select a video idea first."
-        )
-
-    elif not st.session_state["script"].strip():
-
-        st.warning(
-            "Generate the full script first."
-        )
-
-    else:
-
-        with st.spinner("Repurposing your content..."):
-
-            st.session_state["repurposed"] = (
-                generate_repurposed_content(
-                    st.session_state["selected_idea"],
-                    st.session_state["script"],
-                    audience,
-                    tone,
-                    language
+                result = generate_visual_plan(
+                    topic,
+                    storyboard,
                 )
-            )
 
-        st.success("Content repurposed!")
+            st.session_state[
+                "visual_plan"
+            ] = result
 
+            st.write(result)
 
-if st.session_state["repurposed"]:
+    st.divider()
 
-    with st.expander(
-        "🔄 Repurposed Content",
-        expanded=True
+    if st.button(
+        "🖼️ Generate Thumbnail Concepts",
+        key="individual_thumbnail",
+        use_container_width=True,
     ):
 
-        st.code(
-            st.session_state["repurposed"],
-            language=None
-        )
+        with st.spinner(
+            "Creating thumbnail concepts..."
+        ):
 
-
-# ------------------------------------------------------------
-# SEO ANALYSIS
-# ------------------------------------------------------------
-
-if st.button(
-    "🔎 Analyze SEO",
-    use_container_width=True
-):
-
-    if not st.session_state["selected_idea"].strip():
-
-        st.warning(
-            "Please select a video idea first."
-        )
-
-    else:
-
-        with st.spinner("Analyzing YouTube SEO..."):
-
-            st.session_state["seo"] = generate_seo_analysis(
-                st.session_state["selected_idea"],
-                st.session_state["titles"],
-                st.session_state["keywords"],
-                st.session_state["description"]
+            result = generate_thumbnail_ideas(
+                topic
             )
 
-        st.success("SEO analysis completed!")
-
-
-if st.session_state["seo"]:
-
-    with st.expander(
-        "🔎 SEO Analysis",
-        expanded=True
-    ):
+        st.session_state[
+            "thumbnail_ideas"
+        ] = result
 
         st.code(
-            st.session_state["seo"],
-            language=None
+            result,
+            language=None,
         )
 
 
 # ============================================================
-# SAVE CURRENT CONTENT
+# SHORT / REEL
+# ============================================================
+
+with tool_tabs[6]:
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+
+        if st.button(
+            "📱 Generate YouTube Short",
+            key="individual_short",
+            use_container_width=True,
+        ):
+
+            with st.spinner(
+                "Creating Short..."
+            ):
+
+                result = generate_youtube_short(
+                    topic
+                )
+
+            st.session_state[
+                "shorts"
+            ] = result
+
+            st.code(
+                result,
+                language=None,
+            )
+
+    with col2:
+
+        if st.button(
+            "📸 Generate Instagram Reel",
+            key="individual_reel",
+            use_container_width=True,
+        ):
+
+            with st.spinner(
+                "Creating Reel..."
+            ):
+
+                result = generate_instagram_reel(
+                    topic
+                )
+
+            st.session_state[
+                "reel"
+            ] = result
+
+            st.code(
+                result,
+                language=None,
+            )
+
+    st.divider()
+
+    if st.button(
+        "🔄 Generate Repurposed Content",
+        key="individual_repurpose",
+        use_container_width=True,
+    ):
+
+        with st.spinner(
+            "Repurposing content..."
+        ):
+
+            result = generate_repurposed_content(
+                topic
+            )
+
+        st.session_state[
+            "repurposed"
+        ] = result
+
+        st.code(
+            result,
+            language=None,
+        )
+
+
+# ============================================================
+# SEO
+# ============================================================
+
+with tool_tabs[7]:
+
+    if st.button(
+        "🔍 Generate SEO Analysis",
+        key="individual_seo",
+        use_container_width=True,
+    ):
+
+        with st.spinner(
+            "Analyzing SEO..."
+        ):
+
+            result = generate_seo_analysis(
+                topic,
+                st.session_state.get(
+                    "titles",
+                    "",
+                ),
+                st.session_state.get(
+                    "description",
+                    "",
+                ),
+                st.session_state.get(
+                    "keywords",
+                    "",
+                ),
+            )
+
+        st.session_state[
+            "seo"
+        ] = result
+
+        st.write(result)
+
+
+# ============================================================
+# EXPORT
 # ============================================================
 
 st.divider()
 
-st.header("💾 Save Content")
+st.header("📦 Export & Save")
 
-if st.button(
-    "💾 Save Current Project",
-    use_container_width=True
+if st.session_state.get(
+    "factory_completed"
 ):
 
-    if not st.session_state["selected_idea"].strip():
+    export_text = build_text_export()
 
-        st.warning(
-            "There is no project to save yet."
+    col1, col2 = st.columns(2)
+
+    with col1:
+
+        if st.button(
+            "💾 Save Project",
+            use_container_width=True,
+        ):
+
+            save_current_project(
+                topic,
+                audience,
+                tone,
+                video_length,
+                language,
+            )
+
+            st.success(
+                "Project saved to Content History."
+            )
+
+    with col2:
+
+        st.download_button(
+            "📄 Download Content Package",
+            data=export_text,
+            file_name="ai_content_package.txt",
+            mime="text/plain",
+            use_container_width=True,
         )
 
-    else:
+else:
 
-        project = {
-            "date": datetime.now().strftime(
-                "%Y-%m-%d %H:%M:%S"
-            ),
-            "topic": topic,
-            "audience": audience,
-            "tone": tone,
-            "video_length": video_length,
-            "language": language,
-            "idea": st.session_state["selected_idea"],
-            "titles": st.session_state["titles"],
-            "description": st.session_state["description"],
-            "hashtags": st.session_state["hashtags"],
-            "keywords": st.session_state["keywords"],
-            "script": st.session_state["script"],
-            "thumbnail_ideas": st.session_state["thumbnail_ideas"],
-            "scene_plan": st.session_state["scene_plan"],
-            "shorts": st.session_state["shorts"],
-            "reel": st.session_state["reel"],
-            "repurposed": st.session_state["repurposed"],
-            "seo": st.session_state["seo"]
-        }
-
-        save_history(project)
-
-        st.success(
-            "Project saved to Content History!"
-        )
+    st.info(
+        "Create a complete content package first "
+        "to enable the full export."
+    )
 
 
 # ============================================================
@@ -724,298 +1279,65 @@ if not history:
 
 else:
 
-    project_names = []
-
-    for index, project in enumerate(history):
-
-        project_names.append(
-            f"{index + 1}. "
-            f"{project.get('idea', 'Untitled')[:70]} "
-            f"({project.get('date', '')})"
-        )
-
-    selected_project = st.selectbox(
-        "Select a previous project",
-        project_names
-    )
-
-    selected_index = project_names.index(
-        selected_project
-    )
-
-    previous_project = history[selected_index]
-
-    st.subheader("📖 Previous Project")
-
     st.write(
-        f"**Date:** {previous_project.get('date', '')}"
+        f"Saved projects: **{len(history)}**"
     )
 
-    st.write(
-        f"**Topic:** {previous_project.get('topic', '')}"
-    )
+    for index, project in enumerate(
+        reversed(history)
+    ):
 
-    st.write(
-        f"**Audience:** {previous_project.get('audience', '')}"
-    )
-
-    st.write(
-        f"**Style:** {previous_project.get('tone', '')}"
-    )
-
-    st.write(
-        f"**Language:** {previous_project.get('language', '')}"
-    )
-
-    with st.expander("💡 Video Idea"):
-
-        st.code(
-            previous_project.get("idea", ""),
-            language=None
+        project_topic = project.get(
+            "topic",
+            "Untitled",
         )
 
-    with st.expander("🎯 Titles"):
-
-        st.code(
-            previous_project.get("titles", ""),
-            language=None
-        )
-
-    with st.expander("📄 Description"):
-
-        st.code(
-            previous_project.get("description", ""),
-            language=None
-        )
-
-    with st.expander("#️⃣ Hashtags"):
-
-        st.code(
-            previous_project.get("hashtags", ""),
-            language=None
-        )
-
-    with st.expander("🔎 Keywords"):
-
-        st.code(
-            previous_project.get("keywords", ""),
-            language=None
-        )
-
-    with st.expander("🎬 Script"):
-
-        st.code(
-            previous_project.get("script", ""),
-            language=None
-        )
-
-    with st.expander("🖼️ Thumbnail Ideas"):
-
-        st.code(
-            previous_project.get(
-                "thumbnail_ideas",
-                ""
-            ),
-            language=None
-        )
-
-    with st.expander("🎞️ Scene Plan"):
-
-        st.code(
-            previous_project.get(
-                "scene_plan",
-                ""
-            ),
-            language=None
-        )
-
-    with st.expander("⚡ YouTube Short"):
-
-        st.code(
-            previous_project.get(
-                "shorts",
-                ""
-            ),
-            language=None
-        )
-
-    with st.expander("📱 Instagram Reel"):
-
-        st.code(
-            previous_project.get(
-                "reel",
-                ""
-            ),
-            language=None
-        )
-
-    with st.expander("🔄 Repurposed Content"):
-
-        st.code(
-            previous_project.get(
-                "repurposed",
-                ""
-            ),
-            language=None
-        )
-
-    with st.expander("🔎 SEO Analysis"):
-
-        st.code(
-            previous_project.get(
-                "seo",
-                ""
-            ),
-            language=None
-        )
-
-
-# ============================================================
-# EXPORT
-# ============================================================
-
-st.divider()
-
-st.header("📤 Export Your Content")
-
-export_content = f"""
-VIDEO IDEA
-
-{st.session_state["selected_idea"]}
-
-TITLES
-
-{st.session_state["titles"]}
-
-DESCRIPTION
-
-{st.session_state["description"]}
-
-HASHTAGS
-
-{st.session_state["hashtags"]}
-
-KEYWORDS
-
-{st.session_state["keywords"]}
-
-FULL SCRIPT
-
-{st.session_state["script"]}
-
-THUMBNAIL IDEAS
-
-{st.session_state["thumbnail_ideas"]}
-
-SCENE-BY-SCENE PLAN
-
-{st.session_state["scene_plan"]}
-
-YOUTUBE SHORT
-
-{st.session_state["shorts"]}
-
-INSTAGRAM REEL
-
-{st.session_state["reel"]}
-
-REPURPOSED CONTENT
-
-{st.session_state["repurposed"]}
-
-SEO ANALYSIS
-
-{st.session_state["seo"]}
-"""
-
-
-col1, col2 = st.columns(2)
-
-
-with col1:
-
-    st.download_button(
-        "📄 Download as PDF",
-        data=create_pdf(export_content),
-        file_name="youtube_content.pdf",
-        mime="application/pdf",
-        use_container_width=True
-    )
-
-
-with col2:
-
-    st.download_button(
-        "📝 Download as DOCX",
-        data=create_docx(export_content),
-        file_name="youtube_content.docx",
-        mime=(
-            "application/vnd.openxmlformats-officedocument."
-            "wordprocessingml.document"
-        ),
-        use_container_width=True
-    )
-
-
-# ============================================================
-# COPY CONTENT
-# ============================================================
-
-st.subheader("📋 Copy Content")
-
-st.write(
-    "Use the copy icon in the top-right corner of each box."
-)
-
-
-if st.session_state["titles"]:
-
-    st.write("🎯 Titles")
-
-    st.code(
-        st.session_state["titles"],
-        language=None
-    )
-
-
-if st.session_state["description"]:
-
-    st.write("📄 Description")
-
-    st.code(
-        st.session_state["description"],
-        language=None
-    )
-
-
-if st.session_state["hashtags"]:
-
-    st.write("#️⃣ Hashtags")
-
-    st.code(
-        st.session_state["hashtags"],
-        language=None
-    )
-
-
-if st.session_state["keywords"]:
-
-    st.write("🔎 Keywords")
-
-    st.code(
-        st.session_state["keywords"],
-        language=None
-    )
-
-
-if st.session_state["script"]:
-
-    st.write("🎬 Script")
-
-    st.code(
-        st.session_state["script"],
-        language=None
-    )
+        with st.expander(
+            f"📁 {index + 1}. {project_topic}"
+        ):
+
+            st.write(
+                f"**Audience:** "
+                f"{project.get('audience', '')}"
+            )
+
+            st.write(
+                f"**Tone:** "
+                f"{project.get('tone', '')}"
+            )
+
+            st.write(
+                f"**Platform:** "
+                f"{project.get('platform', '')}"
+            )
+
+            saved_content = project.get(
+                "content",
+                {},
+            )
+
+            st.subheader(
+                "💡 Idea"
+            )
+
+            st.write(
+                saved_content.get(
+                    "idea",
+                    "",
+                )
+            )
+
+            st.subheader(
+                "📜 Script"
+            )
+
+            st.code(
+                saved_content.get(
+                    "script",
+                    "",
+                ),
+                language=None,
+            )
 
 
 # ============================================================
@@ -1025,6 +1347,6 @@ if st.session_state["script"]:
 st.divider()
 
 st.caption(
-    "🎬 YouTube Content Creation Agent | "
-    "Powered by Python, Streamlit and Ollama"
+    "🎬 AI Content Studio • "
+    "Python + Streamlit + Ollama"
 )

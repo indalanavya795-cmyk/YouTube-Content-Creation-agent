@@ -1,267 +1,798 @@
-import os
+import json
+import re
+from typing import Any
+
 import ollama
+from dotenv import load_dotenv
+
+load_dotenv()
 
 MODEL = "llama3.2"
 
 
-def ask_ai(prompt):
-    response = ollama.chat(
-        model=MODEL,
-        messages=[{"role": "user", "content": prompt}]
+# ============================================================
+# AI CORE
+# ============================================================
+
+def ask_ai(prompt: str) -> str:
+    """
+    Send a prompt to Ollama and return clean text.
+    """
+
+    try:
+        response = ollama.chat(
+            model=MODEL,
+            messages=[
+                {
+                    "role": "user",
+                    "content": prompt,
+                }
+            ],
+        )
+
+        return response["message"]["content"].strip()
+
+    except Exception as error:
+        raise RuntimeError(
+            f"Ollama could not generate content: {error}"
+        )
+
+
+def ask_ai_json(prompt: str) -> dict[str, Any]:
+    """
+    Ask Ollama for JSON and safely parse the response.
+    """
+
+    response = ask_ai(prompt)
+
+    # Remove markdown code fences if the model adds them.
+    response = response.strip()
+
+    response = re.sub(
+        r"^```(?:json)?",
+        "",
+        response,
+        flags=re.IGNORECASE,
     )
-    return response["message"]["content"]
+
+    response = re.sub(
+        r"```$",
+        "",
+        response,
+    )
+
+    response = response.strip()
+
+    try:
+        return json.loads(response)
+
+    except json.JSONDecodeError:
+
+        # Try extracting the first JSON object.
+        start = response.find("{")
+        end = response.rfind("}")
+
+        if start != -1 and end != -1:
+            try:
+                return json.loads(
+                    response[start:end + 1]
+                )
+            except json.JSONDecodeError:
+                pass
+
+        raise RuntimeError(
+            "AI returned invalid JSON. "
+            "Please try generating again."
+        )
 
 
-def generate_youtube_idea(topic, audience, tone, video_length, language):
+# ============================================================
+# CONTENT STRATEGY
+# ============================================================
+
+def generate_content_strategy(
+    topic: str,
+    audience: str,
+    tone: str,
+    platform: str,
+) -> str:
+
     prompt = f"""
-Generate 5 creative YouTube video ideas.
+You are an expert YouTube content strategist.
+
+Create a practical content strategy.
 
 Topic: {topic}
-Target audience: {audience}
-Content style: {tone}
-Video length: {video_length}
-Language: {language}
+Audience: {audience}
+Tone: {tone}
+Platform: {platform}
 
-Make each idea specific, interesting, suitable for the requested
-audience and length, and write in the requested language.
-Number the ideas 1 to 5.
+Return:
+
+1. Content concept
+2. Viewer problem or desire
+3. Unique angle
+4. Main promise
+5. Suggested video structure
+6. Viewer retention strategy
+7. Call to action
+
+Keep it practical and specific.
 """
+
     return ask_ai(prompt)
 
 
-def generate_youtube_titles(idea, audience, tone, video_length, language):
+# ============================================================
+# VIDEO IDEA
+# ============================================================
+
+def generate_video_idea(
+    topic: str,
+    audience: str,
+    tone: str,
+) -> str:
+
     prompt = f"""
-Generate 5 catchy YouTube titles.
+Generate 5 strong YouTube video concepts.
 
-Video idea: {idea}
-Target audience: {audience}
-Content style: {tone}
-Video length: {video_length}
-Language: {language}
+Topic: {topic}
+Audience: {audience}
+Tone: {tone}
 
-Make them clear, interesting, clickable, suitable for YouTube,
-not misleading, and appropriate for the audience.
-Number them 1 to 5.
+For each concept provide:
+- Concept
+- Why viewers would care
+- Unique angle
+
+Do not give generic ideas.
 """
+
     return ask_ai(prompt)
 
 
-def generate_youtube_description(idea, audience, tone, video_length, language):
+# ============================================================
+# TITLES
+# ============================================================
+
+def generate_titles(
+    topic: str,
+    audience: str,
+    tone: str,
+) -> str:
+
     prompt = f"""
-Write an engaging YouTube description.
+Generate 10 YouTube titles.
 
-Video idea: {idea}
-Target audience: {audience}
-Content style: {tone}
-Video length: {video_length}
-Language: {language}
+Topic: {topic}
+Audience: {audience}
+Tone: {tone}
 
-Clearly explain the video, use relevant keywords naturally,
-encourage viewers to watch, and write in the requested language.
+Requirements:
+- Clear
+- Interesting
+- Natural
+- No fake claims
+- Suitable for YouTube
+- Mix curiosity, benefit and storytelling styles
 """
+
     return ask_ai(prompt)
 
 
-def generate_youtube_hashtags(idea, audience, tone, video_length, language):
+# ============================================================
+# HOOKS
+# ============================================================
+
+def generate_hooks(
+    topic: str,
+) -> str:
+
     prompt = f"""
-Generate 10 relevant YouTube hashtags.
+Create 8 strong opening hooks for a YouTube video.
 
-Video idea: {idea}
-Target audience: {audience}
-Content style: {tone}
-Video length: {video_length}
-Language: {language}
+Topic:
+{topic}
 
-Keep the hashtags relevant and suitable for YouTube.
+Each hook should be suitable for the first
+5 to 15 seconds of a video.
+
+Avoid generic introductions.
 """
+
     return ask_ai(prompt)
 
 
-def generate_youtube_keywords(idea, audience, tone, video_length, language):
+# ============================================================
+# DESCRIPTION
+# ============================================================
+
+def generate_description(
+    topic: str,
+) -> str:
+
     prompt = f"""
-Generate 15 useful YouTube SEO keywords.
+Write a complete YouTube description.
 
-Video idea: {idea}
-Target audience: {audience}
-Content style: {tone}
-Video length: {video_length}
-Language: {language}
-
-Make them highly relevant to what the target audience may search.
-Number them 1 to 15.
-"""
-    return ask_ai(prompt)
-
-
-def generate_youtube_script(idea, audience, tone, video_length, language):
-    prompt = f"""
-Write a complete YouTube video script.
-
-Video idea: {idea}
-Target audience: {audience}
-Content style: {tone}
-Video length: {video_length}
-Language: {language}
+Topic:
+{topic}
 
 Include:
-- Strong introduction
-- Main content
-- Clear organization
-- Natural conclusion
+- Strong opening
+- What viewers will learn
+- Natural keywords
+- Call to action
 
-Follow the requested length and language.
+Do not use keyword stuffing.
 """
+
     return ask_ai(prompt)
 
 
-def generate_thumbnail_ideas(idea, audience, tone, video_length, language):
+# ============================================================
+# HASHTAGS
+# ============================================================
+
+def generate_hashtags(
+    topic: str,
+) -> str:
+
     prompt = f"""
-Generate 5 professional YouTube thumbnail ideas.
+Generate 15 relevant YouTube hashtags.
 
-Video idea: {idea}
-Target audience: {audience}
-Content style: {tone}
-Video length: {video_length}
-Language: {language}
+Topic:
+{topic}
 
-For each idea include the main visual, subject, background,
-composition, suggested text concept, and visual style.
-Make each idea different and suitable for YouTube.
+Return hashtags only.
 """
+
     return ask_ai(prompt)
 
 
-def generate_thumbnail_image(idea):
-    from app.image_generator import (
-        generate_thumbnail_image as generate_image
-    )
+# ============================================================
+# KEYWORDS
+# ============================================================
+
+def generate_keywords(
+    topic: str,
+) -> str:
 
     prompt = f"""
-Create a professional YouTube thumbnail based on this idea:
+Generate 20 useful YouTube SEO keywords.
 
-{idea}
+Topic:
+{topic}
 
-Photorealistic, professional photography, strong visual focus,
-clear composition, cinematic lighting, detailed environment.
-No text, letters, words, logos, or watermark.
+Include:
+- Main keywords
+- Long-tail keywords
+- Search-intent phrases
 """
-    return generate_image(prompt)
+
+    return ask_ai(prompt)
 
 
-def generate_scene_by_scene_script(idea, audience, tone, video_length, language):
+# ============================================================
+# SCRIPT
+# ============================================================
+
+def generate_script(
+    topic: str,
+    audience: str,
+    tone: str,
+    video_length: str,
+    language: str,
+) -> str:
+
     prompt = f"""
-Create a detailed scene-by-scene YouTube video plan.
+Write a complete YouTube script.
 
-Video idea: {idea}
-Target audience: {audience}
-Content style: {tone}
-Video length: {video_length}
+Topic: {topic}
+Audience: {audience}
+Tone: {tone}
+Length: {video_length}
 Language: {language}
 
-For every scene include:
-- Scene number
+Structure:
+
+HOOK
+INTRODUCTION
+MAIN CONTENT
+EXAMPLES
+TRANSITIONS
+CONCLUSION
+CALL TO ACTION
+
+Make it natural for spoken delivery.
+
+Do not describe the script as an essay.
+Write it like something a creator would actually say.
+"""
+
+    return ask_ai(prompt)
+
+
+# ============================================================
+# STORYBOARD
+# ============================================================
+
+def generate_storyboard(
+    topic: str,
+    script: str,
+    video_length: str,
+) -> str:
+
+    prompt = f"""
+Create a detailed video storyboard.
+
+Topic:
+{topic}
+
+Video length:
+{video_length}
+
+Script:
+{script}
+
+For every scene provide:
+
+SCENE NUMBER
+TIMESTAMP
+DURATION
+VISUAL
+CAMERA SHOT
+ACTION
+VOICEOVER
+ON-SCREEN TEXT
+TRANSITION
+VISUAL GENERATION PROMPT
+
+Make the storyboard practical for actually producing
+a video.
+"""
+
+    return ask_ai(prompt)
+
+
+# ============================================================
+# VISUAL ASSET PLAN
+# ============================================================
+
+def generate_visual_plan(
+    topic: str,
+    storyboard: str,
+) -> str:
+
+    prompt = f"""
+Create a visual asset plan for this YouTube video.
+
+Topic:
+{topic}
+
+Storyboard:
+{storyboard}
+
+Identify:
+- Images required
+- Video clips required
+- B-roll
+- Graphics
+- Text overlays
+- Background visuals
+- Thumbnail requirements
+
+For each asset provide a detailed generation/search prompt.
+"""
+
+    return ask_ai(prompt)
+
+
+# ============================================================
+# THUMBNAIL
+# ============================================================
+
+def generate_thumbnail_ideas(
+    topic: str,
+) -> str:
+
+    prompt = f"""
+Create 5 professional YouTube thumbnail concepts.
+
+Topic:
+{topic}
+
+For each provide:
+- Main visual
+- Composition
+- Short text
+- Facial/emotional direction if appropriate
+- Background
+- Color/style direction
+- Image-generation prompt
+"""
+
+    return ask_ai(prompt)
+
+
+# ============================================================
+# SCENE PLAN
+# ============================================================
+
+def generate_scene_plan(
+    topic: str,
+    video_length: str,
+) -> str:
+
+    prompt = f"""
+Create a production-ready scene plan.
+
+Topic:
+{topic}
+
+Length:
+{video_length}
+
+Include:
+- Scene
 - Approximate duration
-- Visual/action
-- Voice-over/dialogue
+- Visual
+- Camera
+- B-roll
+- Voiceover purpose
+- Text overlay
+- Transition
+"""
+
+    return ask_ai(prompt)
+
+
+# ============================================================
+# YOUTUBE SHORT
+# ============================================================
+
+def generate_youtube_short(
+    topic: str,
+) -> str:
+
+    prompt = f"""
+Create a YouTube Short based on:
+
+{topic}
+
+Include:
+- Hook
+- 30-60 second script
+- Visual directions
 - On-screen text
-
-Cover the requested video length and write in the requested language.
+- Ending CTA
 """
+
     return ask_ai(prompt)
 
 
-def generate_youtube_shorts(idea, audience, tone, language):
+# ============================================================
+# INSTAGRAM REEL
+# ============================================================
+
+def generate_instagram_reel(
+    topic: str,
+) -> str:
+
     prompt = f"""
-Create a YouTube Shorts script.
+Create an Instagram Reel concept.
 
-Video idea: {idea}
-Target audience: {audience}
-Content style: {tone}
-Language: {language}
+Topic:
+{topic}
 
-Start with a strong hook, keep it fast and engaging,
-and finish with a natural call to action.
+Include:
+- First-second hook
+- Short script
+- Visual sequence
+- On-screen text
+- Caption
+- CTA
 """
+
     return ask_ai(prompt)
 
 
-def generate_instagram_reel(idea, audience, tone, language):
+# ============================================================
+# REPURPOSED CONTENT
+# ============================================================
+
+def generate_repurposed_content(
+    topic: str,
+) -> str:
+
     prompt = f"""
-Create an Instagram Reel script.
+Repurpose this YouTube topic into multiple platforms.
 
-Video idea: {idea}
-Target audience: {audience}
-Content style: {tone}
-Language: {language}
-
-Include an attention-grabbing hook, short engaging sections,
-visual suggestions, and a natural call to action.
-"""
-    return ask_ai(prompt)
-
-
-def generate_repurposed_content(idea, script, audience, tone, language):
-    prompt = f"""
-Repurpose this YouTube video into social media content.
-
-Video idea: {idea}
-Original script: {script}
-Target audience: {audience}
-Content style: {tone}
-Language: {language}
+Topic:
+{topic}
 
 Create:
-1. YouTube Shorts version
-2. Instagram Reel version
-3. Instagram caption
-4. LinkedIn post
-5. Promotional post
+
+1. Instagram post
+2. LinkedIn post
+3. X/Twitter post
+4. YouTube Community post
+5. Short-form caption
+6. Story idea
+
+Keep each platform's style appropriate.
 """
+
     return ask_ai(prompt)
 
 
-def generate_seo_analysis(idea, titles, keywords, description):
-    prompt = f"""
-Analyze the SEO of this YouTube content.
+# ============================================================
+# SEO
+# ============================================================
 
-Video idea: {idea}
-Titles: {titles}
-Keywords: {keywords}
-Description: {description}
+def generate_seo_analysis(
+    topic: str,
+    titles: str,
+    description: str,
+    keywords: str,
+) -> str:
+
+    prompt = f"""
+Analyze the YouTube SEO strategy.
+
+Topic:
+{topic}
+
+Titles:
+{titles}
+
+Description:
+{description}
+
+Keywords:
+{keywords}
 
 Provide:
-1. Title SEO analysis
+
+1. Search intent
 2. Keyword relevance
-3. Description SEO analysis
-4. Search intent
-5. Missing keywords
-6. Suggested improvements
-7. SEO recommendations
+3. Title suggestions
+4. Description improvements
+5. Keyword improvements
+6. Thumbnail recommendations
+7. Viewer-retention recommendations
 """
+
     return ask_ai(prompt)
 
 
-def save_youtube_content(
-    idea,
+# ============================================================
+# COMPLETE CONTENT FACTORY
+# ============================================================
+
+def generate_content_factory(
+    topic: str,
+    audience: str,
+    tone: str,
+    video_length: str,
+    language: str,
+) -> dict[str, str]:
+
+    idea = generate_video_idea(
+        topic,
+        audience,
+        tone,
+    )
+
+    titles = generate_titles(
+        topic,
+        audience,
+        tone,
+    )
+
+    hooks = generate_hooks(topic)
+
+    description = generate_description(topic)
+
+    hashtags = generate_hashtags(topic)
+
+    keywords = generate_keywords(topic)
+
+    script = generate_script(
+        topic,
+        audience,
+        tone,
+        video_length,
+        language,
+    )
+
+    storyboard = generate_storyboard(
+        topic,
+        script,
+        video_length,
+    )
+
+    visual_plan = generate_visual_plan(
+        topic,
+        storyboard,
+    )
+
+    thumbnail_ideas = generate_thumbnail_ideas(
+        topic,
+    )
+
+    short = generate_youtube_short(topic)
+
+    reel = generate_instagram_reel(topic)
+
+    repurposed = generate_repurposed_content(
+        topic,
+    )
+
+    seo = generate_seo_analysis(
+        topic,
+        titles,
+        description,
+        keywords,
+    )
+
+    return {
+        "idea": idea,
+        "titles": titles,
+        "hooks": hooks,
+        "description": description,
+        "hashtags": hashtags,
+        "keywords": keywords,
+        "script": script,
+        "storyboard": storyboard,
+        "visual_plan": visual_plan,
+        "thumbnail_ideas": thumbnail_ideas,
+        "shorts": short,
+        "reel": reel,
+        "repurposed": repurposed,
+        "seo": seo,
+    }
+
+
+# ============================================================
+# COMPATIBILITY FUNCTIONS
+# ============================================================
+
+def generate_youtube_idea(
+    topic,
+    audience,
+    tone,
+):
+    return generate_video_idea(
+        topic,
+        audience,
+        tone,
+    )
+
+
+def generate_youtube_titles(
+    topic,
+    audience,
+    tone,
+):
+    return generate_titles(
+        topic,
+        audience,
+        tone,
+    )
+
+
+def generate_youtube_description(topic):
+    return generate_description(topic)
+
+
+def generate_youtube_hashtags(topic):
+    return generate_hashtags(topic)
+
+
+def generate_youtube_keywords(topic):
+    return generate_keywords(topic)
+
+
+def generate_youtube_script(
+    topic,
+    audience,
+    tone,
+    video_length,
+    language,
+):
+    return generate_script(
+        topic,
+        audience,
+        tone,
+        video_length,
+        language,
+    )
+
+
+def generate_scene_by_scene_script(
+    topic,
+    video_length,
+):
+    return generate_scene_plan(
+        topic,
+        video_length,
+    )
+
+
+def generate_scene_by_scene(
+    topic,
+    video_length,
+):
+    return generate_scene_plan(
+        topic,
+        video_length,
+    )
+
+
+def generate_youtube_shorts(topic):
+    return generate_youtube_short(topic)
+
+
+def generate_shorts(topic):
+    return generate_youtube_short(topic)
+
+
+def generate_reel(topic):
+    return generate_instagram_reel(topic)
+
+
+def generate_seo(
+    topic,
     titles,
     description,
-    hashtags,
     keywords,
-    script,
-    thumbnail_ideas
 ):
-    os.makedirs("outputs", exist_ok=True)
+    return generate_seo_analysis(
+        topic,
+        titles,
+        description,
+        keywords,
+    )
 
-    file_path = "outputs/youtube_content.txt"
 
-    with open(file_path, "w", encoding="utf-8") as file:
-        file.write("YOUTUBE CONTENT\n")
-        file.write("============================\n\n")
+def generate_thumbnail_image(
+    prompt,
+    output_path,
+):
+    """
+    Placeholder for future image-generation integration.
+    """
+    raise NotImplementedError(
+        "Image generation will be connected "
+        "through the visual asset pipeline."
+    )
 
-        file.write("VIDEO IDEA\n")
-        file.write("----------------------------\n")
-        file.write(idea + "\n\n")
 
-        file.write("TITLES\n")
-        file.write("----------------------------\n")
-        file
+# ============================================================
+# SAVE TEXT CONTENT
+# ============================================================
+
+def save_youtube_content(
+    content: str,
+    filename: str = "outputs/youtube_content.txt",
+):
+
+    import os
+
+    folder = os.path.dirname(filename)
+
+    if folder:
+        os.makedirs(
+            folder,
+            exist_ok=True,
+        )
+
+    with open(
+        filename,
+        "w",
+        encoding="utf-8",
+    ) as file:
+
+        file.write(content)
+
+    return filename
