@@ -90,6 +90,120 @@ def ask_ai_json(prompt: str) -> dict[str, Any]:
 # CONTENT STRATEGY
 # ============================================================
 
+
+def generate_creative_ideas(
+    audience,
+    platform,
+    content_type,
+    goal,
+):
+    prompt = f"""
+You are a highly creative social-media content strategist.
+
+Generate 8 ORIGINAL content ideas for:
+
+Audience: {audience}
+Platform: {platform}
+Content type: {content_type}
+Goal: {goal}
+
+IMPORTANT:
+- Every idea must have a DIFFERENT concept or angle.
+- Avoid generic ideas like "5 tips", "10 things", or repetitive listicles.
+- Include surprising, relatable, curiosity-driven, story-based,
+  experimental, and trend-inspired concepts.
+- Make ideas realistic for a student/individual creator.
+- Do not require expensive equipment.
+
+For each idea provide exactly:
+
+IDEA:
+HOOK:
+FORMAT:
+WHY IT COULD WORK:
+TITLE:
+
+Make the ideas concise, specific and genuinely creative.
+"""
+
+    return ask_ai(prompt)
+
+
+
+def generate_surprise_idea(
+    audience,
+    platform,
+    content_type,
+):
+    prompt = f"""
+You are a highly creative YouTube and social-media idea generator.
+
+Create ONE unexpected content idea for:
+
+Audience: {audience}
+Platform: {platform}
+Content type: {content_type}
+
+The idea should:
+- Be unusual and memorable
+- Be realistic for an individual creator
+- Not require expensive equipment
+- Have a strong curiosity hook
+- Avoid generic "5 tips" or "10 things" listicles
+
+Return exactly:
+
+IDEA:
+HOOK:
+FORMAT:
+TITLE:
+WHY IT COULD WORK:
+"""
+
+    return ask_ai(prompt)
+
+
+def generate_trend_inspired_ideas(
+    audience,
+    platform,
+    content_type,
+):
+    prompt = f"""
+You are a creative social-media strategist.
+
+Generate 5 TREND-INSPIRED content concepts for:
+
+Audience: {audience}
+Platform: {platform}
+Content type: {content_type}
+
+Use current-style content patterns such as:
+- POV formats
+- Challenges
+- Experiments
+- Before/after storytelling
+- Curiosity-driven hooks
+- Relatable situations
+- Short-form storytelling
+
+Do NOT claim these are live or verified trending topics.
+Make them trend-inspired concepts that a creator could adapt.
+
+For each concept provide:
+
+IDEA:
+HOOK:
+FORMAT:
+TITLE:
+WHY IT COULD WORK:
+
+Keep each concept specific and creative.
+"""
+
+    return ask_ai(prompt)
+
+
+
 def generate_content_strategy(
     topic: str,
     audience: str,

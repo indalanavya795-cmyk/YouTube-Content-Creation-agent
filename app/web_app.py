@@ -1,3 +1,4 @@
+import zipfile
 import json
 import os
 import re
@@ -26,6 +27,9 @@ from agent import (
     generate_repurposed_content,
     generate_seo_analysis,
     generate_content_factory,
+    generate_creative_ideas,
+    generate_surprise_idea,
+    generate_trend_inspired_ideas,
 )
 
 
@@ -303,6 +307,7 @@ with st.sidebar:
     topic = st.text_input(
         "📌 YouTube Topic",
         value="GRWM college morning routine",
+        key="topic_input",
     )
 
     audience = st.selectbox(
@@ -369,12 +374,197 @@ with st.sidebar:
         "AI-generated content."
     )
 
+    # ========================================================
+    # CREATIVE IDEA LAB
+    # ========================================================
+
+    st.subheader("💡 Creative Idea Lab")
+
+    idea_content_type = st.selectbox(
+        "🎨 Content Type",
+        [
+            "Lifestyle",
+            "Education",
+            "Technology",
+            "Entertainment",
+            "College Life",
+            "Storytelling",
+            "Self Improvement",
+            "Any / Surprise Me",
+        ],
+        key="idea_content_type",
+    )
+
+    idea_goal = st.selectbox(
+        "🎯 Content Goal",
+        [
+            "Get attention",
+            "Build engagement",
+            "Grow a personal brand",
+            "Tell an interesting story",
+            "Create something different",
+        ],
+        key="idea_goal",
+    )
+
+    if st.button(
+        "💡 GENERATE CREATIVE IDEAS",
+        use_container_width=True,
+    ):
+
+        with st.spinner(
+            "🧠 Brainstorming fresh content ideas..."
+        ):
+
+            st.session_state["creative_ideas"] = (
+                generate_creative_ideas(
+                    audience,
+                    platform,
+                    idea_content_type,
+                    idea_goal,
+                )
+            )
+
+        st.session_state["creative_ideas_ready"] = True
+
+    st.divider()
+
+    st.caption("Need something more unexpected?")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        if st.button(
+            "🎲 SURPRISE ME",
+            use_container_width=True,
+        ):
+            with st.spinner("🎲 Creating a surprise idea..."):
+                st.session_state["surprise_idea"] = (
+                    generate_surprise_idea(
+                        audience,
+                        platform,
+                        idea_content_type,
+                    )
+                )
+
+            st.session_state["surprise_idea_ready"] = True
+
+    with col2:
+        if st.button(
+            "🔥 TREND-INSPIRED",
+            use_container_width=True,
+        ):
+            with st.spinner("🔥 Finding trend-inspired concepts..."):
+                st.session_state["trend_ideas"] = (
+                    generate_trend_inspired_ideas(
+                        audience,
+                        platform,
+                        idea_content_type,
+                    )
+                )
+
+            st.session_state["trend_ideas_ready"] = True
+
 
 # ============================================================
 # HEADER
 # ============================================================
 
 st.title("🎬 AI Content Studio")
+
+# ============================================================
+# SURPRISE ME RESULTS
+# ============================================================
+
+if st.session_state.get("surprise_idea_ready"):
+
+    st.divider()
+    st.header("🎲 Surprise Idea")
+
+    st.write(
+        st.session_state.get(
+            "surprise_idea",
+            "",
+        )
+    )
+
+    st.info(
+        "💡 Like this idea? Copy its title or use it as your YouTube topic."
+    )
+
+
+# ============================================================
+# TREND-INSPIRED RESULTS
+# ============================================================
+
+if st.session_state.get("trend_ideas_ready"):
+
+    st.divider()
+    st.header("🔥 Trend-Inspired Concepts")
+
+    st.caption(
+        "Trend-inspired formats you can adapt to your own content."
+    )
+
+    st.write(
+        st.session_state.get(
+            "trend_ideas",
+            "",
+        )
+    )
+
+
+# ============================================================
+# CREATIVE IDEA LAB RESULTS
+# ============================================================
+
+if st.session_state.get("creative_ideas_ready"):
+
+    st.divider()
+
+    st.header("💡 Creative Idea Lab")
+
+    st.caption(
+        "Fresh concepts designed to help you decide what to create next."
+    )
+
+    st.write(
+        st.session_state.get(
+            "creative_ideas",
+            "",
+        )
+    )
+
+    st.info(
+        "💡 Pick an idea below and use it directly as your YouTube topic."
+    )
+
+    idea_titles = re.findall(
+        r"(?:\*\*)?TITLE(?:\*\*)?\s*:\s*(.+)",
+        st.session_state.get("creative_ideas", ""),
+        flags=re.IGNORECASE,
+    )
+
+    idea_titles = [
+        title.strip().strip("*").strip()
+        for title in idea_titles
+        if title.strip()
+    ]
+
+    if idea_titles:
+        selected_idea = st.selectbox(
+            "🎯 Choose an idea to use",
+            idea_titles,
+            key="selected_creative_idea",
+        )
+
+        if st.button(
+            "🚀 USE THIS IDEA",
+            use_container_width=True,
+        ):
+            st.session_state["topic_input"] = selected_idea
+            st.rerun()
+
 
 st.write(
     "Turn one idea into a complete "
