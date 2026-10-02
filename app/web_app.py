@@ -41,6 +41,21 @@ st.set_page_config(
 
 
 # ============================================================
+# APP HEADER
+# ============================================================
+
+st.title("🎬 AI Content Studio")
+
+st.markdown(
+    "### AI-powered YouTube content planning, scripting, visuals, thumbnails & SEO"
+)
+
+st.caption(
+    "Create → Plan → Script → Visualize → Publish"
+)
+
+
+# ============================================================
 # PATHS
 # ============================================================
 
@@ -513,6 +528,19 @@ if st.button(
                 topic
             )
 
+            # Create the actual thumbnail image locally
+            thumbnail_path = OUTPUT_DIR / "thumbnail.png"
+
+            create_thumbnail(
+                topic=topic,
+                headline=f"{topic} — WATCH THIS",
+                output_path=str(thumbnail_path),
+            )
+
+            st.session_state[
+                "thumbnail_path"
+            ] = str(thumbnail_path)
+
             progress.progress(70)
 
             status.info(
@@ -584,6 +612,51 @@ if st.button(
 
 
 # ============================================================
+# DOWNLOAD COMPLETE PACKAGE
+# ============================================================
+
+if st.session_state.get("factory_completed"):
+
+    package_files = {
+        "content_strategy.txt": st.session_state.get("strategy", ""),
+        "video_idea.txt": st.session_state.get("idea", ""),
+        "titles.txt": st.session_state.get("titles", ""),
+        "hooks.txt": st.session_state.get("hooks", ""),
+        "script.txt": st.session_state.get("script", ""),
+        "storyboard.txt": st.session_state.get("storyboard", ""),
+        "visual_plan.txt": st.session_state.get("visual_plan", ""),
+        "scene_plan.txt": st.session_state.get("scene_plan", ""),
+        "thumbnail_concepts.txt": st.session_state.get("thumbnail_ideas", ""),
+        "youtube_short.txt": st.session_state.get("shorts", ""),
+        "instagram_reel.txt": st.session_state.get("reel", ""),
+        "repurposed_content.txt": st.session_state.get("repurposed", ""),
+        "seo_analysis.txt": st.session_state.get("seo", ""),
+    }
+
+    zip_path = OUTPUT_DIR / "complete_content_package.zip"
+
+    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as package:
+
+        for filename, content in package_files.items():
+            package.writestr(filename, str(content))
+
+        thumbnail = st.session_state.get("thumbnail_path")
+
+        if thumbnail and Path(thumbnail).exists():
+            package.write(thumbnail, "thumbnail.png")
+
+    with open(zip_path, "rb") as package_file:
+
+        st.download_button(
+            "📦 DOWNLOAD COMPLETE PACKAGE",
+            package_file,
+            file_name="AI_Content_Studio_Package.zip",
+            mime="application/zip",
+            use_container_width=True,
+        )
+
+
+# ============================================================
 # RESULTS
 # ============================================================
 
@@ -600,6 +673,30 @@ if st.session_state.get(
     st.success(
         "Your topic has been transformed into "
         "a complete content-production blueprint."
+    )
+
+    # ========================================================
+    # PROJECT DASHBOARD
+    # ========================================================
+
+    st.subheader("📊 Project Dashboard")
+
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        st.metric("🧠 Strategy", "✓ Ready")
+
+    with col2:
+        st.metric("✍️ Script", "✓ Ready")
+
+    with col3:
+        st.metric("🖼️ Thumbnail", "✓ Ready")
+
+    with col4:
+        st.metric("🔍 SEO", "✓ Ready")
+
+    st.caption(
+        f"🎬 Project Topic: {topic}"
     )
 
     tabs = st.tabs(
@@ -732,6 +829,41 @@ if st.session_state.get(
             ],
             language=None,
         )
+
+        # ====================================================
+        # GENERATED THUMBNAIL
+        # ====================================================
+
+        thumbnail_path = st.session_state.get(
+            "thumbnail_path"
+        )
+
+        if thumbnail_path and Path(
+            thumbnail_path
+        ).exists():
+
+            st.subheader(
+                "🎨 Generated Thumbnail"
+            )
+
+            st.image(
+                thumbnail_path,
+                caption="AI Content Studio Thumbnail",
+                use_container_width=True,
+            )
+
+            with open(
+                thumbnail_path,
+                "rb",
+            ) as image_file:
+
+                st.download_button(
+                    "⬇️ Download Thumbnail",
+                    image_file,
+                    file_name="youtube_thumbnail.png",
+                    mime="image/png",
+                    use_container_width=True,
+                )
 
     # ========================================================
     # SOCIAL
@@ -1092,7 +1224,7 @@ with tool_tabs[5]:
 
             create_thumbnail(
                 topic=topic,
-                headline=f"{topic} — WATCH THIS",
+                headline=str(st.session_state.get("titles", f"{topic} — WATCH THIS")).splitlines()[0],
                 output_path=str(thumbnail_path),
             )
 
