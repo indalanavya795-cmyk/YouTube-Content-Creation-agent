@@ -1,0 +1,10 @@
+credentials:
+  usernames: {}
+
+cookie:
+  name: ai_content_studio
+  key: change-this-to-a-random-secret-key
+  expiry_days: 30
+
+preauthorized:
+  emails: []
