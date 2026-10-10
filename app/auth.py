@@ -6,7 +6,7 @@ import bcrypt
 
 
 USERS_FILE = Path("data/users.json")
-USERS_FILE.parent.mkdir(exist_ok=True)
+USERS_FILE.parent.mkdir(parents=True, exist_ok=True)
 
 def load_users():
     if not USERS_FILE.exists():

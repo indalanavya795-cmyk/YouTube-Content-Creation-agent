@@ -21,6 +21,12 @@ def ask_ai(prompt: str) -> str:
     Use Groq when GROQ_API_KEY is configured; otherwise use local Ollama.
     """
     api_key = os.getenv("GROQ_API_KEY")
+    if not api_key:
+        try:
+            import streamlit as st
+            api_key = st.secrets.get("GROQ_API_KEY")
+        except Exception:
+            api_key = None
 
     if api_key:
         try:
