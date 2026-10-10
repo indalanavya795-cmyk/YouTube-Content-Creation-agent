@@ -1,5 +1,7 @@
 import json
 import re
+import os
+from groq import Groq
 from typing import Any
 
 import ollama
@@ -16,26 +18,34 @@ MODEL = "llama3.2"
 
 def ask_ai(prompt: str) -> str:
     """
-    Send a prompt to Ollama and return clean text.
+    Use Groq when GROQ_API_KEY is configured; otherwise use local Ollama.
     """
+    api_key = os.getenv("GROQ_API_KEY")
+
+    if api_key:
+        try:
+            client = Groq(api_key=api_key)
+            response = client.chat.completions.create(
+                model=os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile"),
+                messages=[{"role": "user", "content": prompt}],
+            )
+            content = response.choices[0].message.content
+            if not content:
+                raise RuntimeError("The hosted AI returned an empty response.")
+            return content.strip()
+        except Exception as error:
+            raise RuntimeError(f"Groq could not generate content: {error}") from error
 
     try:
         response = ollama.chat(
             model=MODEL,
-            messages=[
-                {
-                    "role": "user",
-                    "content": prompt,
-                }
-            ],
+            messages=[{"role": "user", "content": prompt}],
         )
-
         return response["message"]["content"].strip()
-
     except Exception as error:
         raise RuntimeError(
             f"Ollama could not generate content: {error}"
-        )
+        ) from error
 
 
 def ask_ai_json(prompt: str) -> dict[str, Any]:

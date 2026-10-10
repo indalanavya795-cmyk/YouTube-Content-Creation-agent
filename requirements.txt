@@ -1,0 +1,7 @@
+streamlit
+ollama
+python-dotenv
+bcrypt
+Pillow
+streamlit-authenticator
+groq
